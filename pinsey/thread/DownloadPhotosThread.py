@@ -1,4 +1,5 @@
 import urllib
+from pinsey.Utils import EmptyDict
 from PyQt4 import QtCore
 
 
@@ -25,8 +26,11 @@ class DownloadPhotosThread(QtCore.QThread):
     def run(self):
         photo_list = []
         for url in self.url_list:
+            photo = EmptyDict()
+            photo.url = url
             try:
-                photo_list.append(urllib.request.urlopen(url).read())
+                photo.data = urllib.request.urlopen(url).read()
+                photo_list.append(photo)
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
                 print('Download photos error: ' + str(ex))

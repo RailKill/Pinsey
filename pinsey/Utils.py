@@ -1,5 +1,7 @@
 from PyQt4 import QtGui, QtCore
 
+class EmptyDict(dict):
+    pass
 
 def clickable(widget):
     class Filter(QtCore.QObject):
