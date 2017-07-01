@@ -27,7 +27,7 @@ class SessionThread(QtCore.QThread):
 
     def run(self):
         try:
-            session = pynder.Session(self.id, self.auth)
+            session = pynder.Session(facebook_id=self.id, facebook_token=self.auth)
             geolocator = Nominatim()
             location = geolocator.geocode(self.location)
             session.update_location(location.latitude, location.longitude)

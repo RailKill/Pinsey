@@ -23,15 +23,21 @@ class NearbyUsersThread(QtCore.QThread):
         self.session = session
 
     def run(self):
-        nearby_users = self.session.nearby_users()
+        nearby_users = self.session.nearby_users() # Generator object.
+        user_list = []
+        limit = 10
 
         # Download first image as thumbnail and add it as a new attribute of the user so it can be retrieved later.
-        for user in nearby_users:
+        for i in range(limit):
+            user = next(nearby_users) # Iterate through generator object.
             try:
                 user.thumb_data = urllib.request.urlopen(user.photos[0]).read()
+
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
                 print('Nearby users fetching error: ' + str(ex))
 
+            user_list.append(user)
+
         # Return the modified list of users.
-        self.data_downloaded.emit(nearby_users)
+        self.data_downloaded.emit(user_list)
