@@ -25,7 +25,7 @@ class NearbyUsersThread(QtCore.QThread):
     def run(self):
         nearby_users = self.session.nearby_users() # Generator object.
         user_list = []
-        limit = 10
+        limit = 10  # TODO: Should not be fixed to 10, let it be user customizable.
 
         # Download first image as thumbnail and add it as a new attribute of the user so it can be retrieved later.
         for i in range(limit):

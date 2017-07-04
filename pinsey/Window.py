@@ -1,7 +1,8 @@
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from pinsey.ImageWindow import ImageWindow
-from pinsey.Utils import clickable, center, horizontal_line
+from pinsey.Utils import clickable, center, horizontal_line, EMOJI_PATTERN
+from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
 from PyQt4 import QtGui, QtCore
@@ -30,6 +31,7 @@ class Window(QtGui.QMainWindow):
         self.chk_autochat = QtGui.QCheckBox('Autonomous Chatting', self)
         self.chk_respond_list = QtGui.QCheckBox('Respond from List', self)
         self.chk_respond_bot = QtGui.QCheckBox('Respond using Cleverbot', self)
+        self.profile_area = QtGui.QScrollArea()
 
         # Initialize application variables.
         self.windows = []
@@ -39,6 +41,8 @@ class Window(QtGui.QMainWindow):
         self.setMinimumWidth(500)
         self.minimumHeight()
         center(self)
+
+        self.download_thread = None
 
         # Run startup methods to setup the GUI.
         self.read_settings()
@@ -84,6 +88,7 @@ class Window(QtGui.QMainWindow):
 
         # Add tabs
         tabs.addTab(self.setup_settings(), 'Settings')
+        tabs.addTab(self.setup_profile(), 'Profile')
         tabs.addTab(tab_liked, 'Liked')
         tabs.addTab(tab_disliked, 'Disliked')
         tabs.addTab(self.setup_browse(), 'Browse')
@@ -152,6 +157,12 @@ class Window(QtGui.QMainWindow):
         tab_settings.setLayout(grid)
         return tab_settings
 
+    def setup_profile(self):
+        tab_profile = QtGui.QWidget()
+        tab_profile.setLayout(QtGui.QVBoxLayout())
+        tab_profile.layout().addWidget(self.profile_area)
+        return tab_profile
+
     def setup_browse(self):
         tab_browse = QtGui.QWidget()
         scroll = QtGui.QScrollArea()
@@ -162,6 +173,257 @@ class Window(QtGui.QMainWindow):
         tab_browse.layout().addWidget(scroll)
         self.refresh_users(scroll, btn_refresh)
         return tab_browse
+
+    def load_profile(self):
+        def populate(data):
+            profile_widget = QtGui.QWidget()
+
+            # 1. Profile picture grid.
+            pp_layout = QtGui.QGridLayout()
+            pp_layout.setSpacing(1)
+            number_of_photos_allowed = 6
+            photos_half_amount = number_of_photos_allowed / 2
+            photos_median = number_of_photos_allowed - photos_half_amount - 1
+            median_section_count = 0
+            last_section_count = 0
+
+            for i in range(number_of_photos_allowed):
+                image = QtGui.QImage()
+                label = QtGui.QLabel()
+
+                # Load profile photo data.
+                label.setScaledContents(True)
+                if i < len(data):
+                    image.loadFromData(data[i].data)
+                    label.setPixmap(QtGui.QPixmap(image))
+                else:
+                    label.setText(str(i + 1))
+                    label.setAlignment(QtCore.Qt.AlignCenter)
+                    label.setStyleSheet('border: 1px solid')
+
+                # Determine photo size for grid arrangement.
+                size = self.THUMBNAIL_SIZE
+                if i >= photos_half_amount:
+                    size /= photos_half_amount
+                    pp_layout.addWidget(label, last_section_count * photos_median, 2, photos_median, 1)
+                    last_section_count += 1
+                elif i > 0:
+                    size /= photos_median
+                    pp_layout.addWidget(label, median_section_count *  photos_half_amount, 1, photos_half_amount, 1)
+                    median_section_count += 1
+                else:
+                    pp_layout.addWidget(label, 0, 0, photos_half_amount * photos_median, 1)
+                label.setFixedWidth(size)
+                label.setFixedHeight(size)
+
+            # 2. Name and gender of user.
+            if profile.gender == 'female':
+                gender_string = '<span style="color: DeepPink;' + self.CSS_FONT_EMOJI + '"> ♀ </span>'
+            else:
+                gender_string = '<span style="color: DodgerBlue;' + self.CSS_FONT_EMOJI + '"> ♂ </span>'
+            banned_string = '<span style="color: Red;"> [BANNED] </span>' if profile.banned else ''
+            name_string = '<span style="' + self.CSS_FONT_HEADLINE + '">' + profile.name + gender_string + \
+                          banned_string + '</span>'
+            label_name = QtGui.QLabel(name_string)
+            label_name.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+            pp_layout.addWidget(label_name, number_of_photos_allowed, 0, 1, number_of_photos_allowed)
+
+            # 3. Biography.
+            def bio_truncate():
+                # Tinder counts emojis as 2 characters. Find and manipulate them so the character count is correct.
+                emoji_raw = EMOJI_PATTERN.findall(txt_bio.toPlainText())
+                number_of_emojis = 0
+                for emoji in emoji_raw:
+                    number_of_emojis += len(emoji)
+
+                # Encode to UTF-8, emojis are counted as 4 characters.
+                bio_true_length = len(txt_bio.toPlainText().encode()) - (number_of_emojis * 2)
+                label_chars.setText(str(biography_max_length - len(txt_bio.toPlainText().encode()) +
+                                        (number_of_emojis * 2)) + remaining_chars)
+                if bio_true_length > biography_max_length:
+                    txt_bio.setPlainText(txt_bio.toPlainText()[:biography_max_length - number_of_emojis])
+                    txt_bio.moveCursor(QtGui.QTextCursor.End)
+
+            biography_max_length = 500
+            label_bio = QtGui.QLabel('Biography: ')
+            remaining_chars = ' characters remaining'
+            label_chars = QtGui.QLabel(str(biography_max_length) + remaining_chars)
+            bio_widget = QtGui.QWidget()
+            bio_widget.setLayout(QtGui.QHBoxLayout())
+            bio_widget.layout().addWidget(label_bio)
+            bio_widget.layout().addStretch()
+            bio_widget.layout().addWidget(label_chars)
+            pp_layout.addWidget(bio_widget, number_of_photos_allowed + 1, 0, 1, number_of_photos_allowed)
+
+            txt_bio = QtGui.QPlainTextEdit(profile.bio)
+            txt_bio.setFont(QtGui.QFont('Segoe UI Symbol', 16))
+            txt_bio.textChanged.connect(bio_truncate)
+            bio_truncate()
+            pp_layout.addWidget(txt_bio, number_of_photos_allowed + 2, 0, 1, number_of_photos_allowed)
+
+            # Form layout setup.
+            form_layout = QtGui.QFormLayout()
+            # form_layout.setLabelAlignment(QtCore.Qt.AlignRight)
+            form_widget = QtGui.QWidget()
+            form_widget.setLayout(form_layout)
+            pp_layout.addWidget(form_widget, number_of_photos_allowed + 3, 0, 1, number_of_photos_allowed)
+            form_label_style = 'margin-top: 0.3em'
+
+            # 4. Gender
+            radio_gender_male = QtGui.QRadioButton('Male')
+            radio_gender_female = QtGui.QRadioButton('Female')
+            if profile.gender == 'male':
+                radio_gender_male.setChecked(True)
+            else:
+                radio_gender_female.setChecked(True)
+            gender_widget = QtGui.QWidget()
+            gender_widget.setLayout(QtGui.QHBoxLayout())
+            gender_widget.layout().addWidget(radio_gender_male)
+            gender_widget.layout().addWidget(radio_gender_female)
+            label_gender = QtGui.QLabel('Gender: ')
+            label_gender.setStyleSheet(form_label_style)
+            form_layout.addRow(label_gender, gender_widget)
+
+            # 5. Discoverable?
+            label_discoverable = QtGui.QLabel('Discoverable: ')
+            chk_discoverable = QtGui.QCheckBox()
+            chk_discoverable.setChecked(profile.discoverable)
+            form_layout.addRow(label_discoverable, chk_discoverable)
+
+            # 6. Maximum distance filter.
+            label_distance = QtGui.QLabel('Maximum Distance: ')
+            label_distance.setStyleSheet(form_label_style)
+            slider_distance = QtGui.QSlider(QtCore.Qt.Horizontal)
+            slider_distance.setRange(1, 100)
+            slider_distance.setSingleStep(1)
+            slider_distance.setValue(profile.distance_filter)
+            slider_distance.valueChanged.connect(
+                lambda: (label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')))
+            label_distance_value = QtGui.QLabel(str(round(slider_distance.value() * 1.6)) + 'km')
+            distance_widget = QtGui.QWidget()
+            distance_widget.setLayout(QtGui.QHBoxLayout())
+            distance_widget.layout().addWidget(slider_distance)
+            distance_widget.layout().addWidget(label_distance_value)
+            form_layout.addRow(label_distance, distance_widget)
+
+            # 7. Age filter.
+            def max_slider_handle():
+                label_age_max.setText('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
+                slider_age_min.setRange(18, 46 if slider_age_max.value() > 46 else slider_age_max.value())
+
+            def min_slider_handle():
+                label_age_min.setText(str(slider_age_min.value()))
+                slider_age_max.setRange(slider_age_min.value(), 55)
+
+            label_age = QtGui.QLabel('Age: ')
+            label_age.setStyleSheet(form_label_style)
+            label_to = QtGui.QLabel(' to ')
+            slider_age_max = QtGui.QSlider(QtCore.Qt.Horizontal)
+            slider_age_max.setRange(profile.age_filter_min, 55)
+            slider_age_max.setSingleStep(1)
+            slider_age_max.setValue(55 if profile.age_filter_max > 54 else profile.age_filter_max)
+            slider_age_max.valueChanged.connect(max_slider_handle)
+            label_age_max = QtGui.QLabel('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
+
+            slider_age_min = QtGui.QSlider(QtCore.Qt.Horizontal)
+            slider_age_min.setRange(18, 46 if profile.age_filter_max > 46 else profile.age_filter_max)
+            slider_age_min.setSingleStep(1)
+            slider_age_min.setValue(profile.age_filter_min)
+            slider_age_min.valueChanged.connect(min_slider_handle)
+            label_age_min = QtGui.QLabel(str(slider_age_min.value()))
+
+            age_widget = QtGui.QWidget()
+            age_widget.setLayout(QtGui.QHBoxLayout())
+            age_widget.layout().addWidget(label_age_min)
+            age_widget.layout().addWidget(slider_age_min)
+            age_widget.layout().addWidget(label_to)
+            age_widget.layout().addWidget(slider_age_max)
+            age_widget.layout().addWidget(label_age_max)
+            form_layout.addRow(label_age, age_widget)
+
+            # 8. Interested in which gender?
+            label_interested = QtGui.QLabel('Interested in: ')
+            label_interested.setStyleSheet(form_label_style)
+            chk_interested_male = QtGui.QCheckBox('Male')
+            chk_interested_male.setChecked('male' in list(profile.interested_in))
+            chk_interested_female = QtGui.QCheckBox('Female')
+            chk_interested_female.setChecked('female' in list(profile.interested_in))
+            interested_widget = QtGui.QWidget()
+            interested_widget.setLayout(QtGui.QHBoxLayout())
+            interested_widget.layout().addWidget(chk_interested_male)
+            interested_widget.layout().addWidget(chk_interested_female)
+            form_layout.addRow(label_interested, interested_widget)
+
+            # 9. Save button.
+            def save_profile():
+                # Must have an interested gender before proceeding.
+                if not chk_interested_male.isChecked() and not chk_interested_female.isChecked():
+                    QtGui.QMessageBox().critical(self, 'Profile Error',
+                                                 'You must be interested in at least one gender.')
+                    return
+
+                # Set profile values.
+                profile.bio = txt_bio.toPlainText()
+                profile.discoverable = chk_discoverable.isChecked()
+                profile.distance_filter = slider_distance.value()
+                profile.age_filter_min = slider_age_min.value()
+                profile.age_filter_max = 1000 if slider_age_max.value() > 54 else slider_age_max.value()
+
+                # Workaround due to pynder 0.0.13 not yet supporting "gender" and "interested in" changes.
+                gender_filter = 2
+                profile.interested = []
+                profile.sex = 0 if radio_gender_male.isChecked() else 1
+                if chk_interested_male.isChecked():
+                    gender_filter -= 2
+                    profile.interested.append(0)
+                if chk_interested_female.isChecked():
+                    gender_filter -= 1
+                    profile.interested.append(1)
+                self.session.update_profile({
+                    "interested_in": profile.interested,
+                    "gender_filter": gender_filter,
+                    "gender": profile.sex
+                    # "squads_discoverable": False
+                })
+
+                QtGui.QMessageBox.information(self, 'Profile Saved', 'Profile information has been updated.')
+                reload_profile()
+
+            def reload_profile():
+                # Refresh GUI.
+                if profile.sex == 'female':
+                    reload_gender_string = '<span style="color: DeepPink;' + self.CSS_FONT_EMOJI + '"> ♀ </span>'
+                else:
+                    reload_gender_string = '<span style="color: DodgerBlue;' + self.CSS_FONT_EMOJI + '"> ♂ </span>'
+                label_name.setText('<span style="' + self.CSS_FONT_HEADLINE + '">' +
+                                   profile.name + reload_gender_string + banned_string + '</span>')
+                txt_bio.setPlainText(profile.bio)
+                chk_discoverable.setChecked(profile.discoverable)
+                slider_distance.setValue(profile.distance_filter)
+                label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')
+                slider_age_max.setRange(profile.age_filter_min, 55)
+                slider_age_max.setValue(55 if profile.age_filter_max > 54 else profile.age_filter_max)
+                label_age_max.setText('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
+                slider_age_min.setRange(18, 46 if profile.age_filter_max > 46 else profile.age_filter_max)
+                slider_age_min.setValue(profile.age_filter_min)
+                label_age_min.setText(str(slider_age_min.value()))
+                chk_interested_male.setChecked(0 in list(profile.interested))  # interested_in workaround.
+                chk_interested_female.setChecked(1 in list(profile.interested))  # interested_in workaround.
+
+            btn_save_profile = QtGui.QPushButton('Update Profile')
+            btn_save_profile.setFixedHeight(50)
+            btn_save_profile.clicked.connect(save_profile)
+            pp_layout.addWidget(btn_save_profile, number_of_photos_allowed + 4, 0, 1, number_of_photos_allowed)
+
+            profile_widget.setLayout(pp_layout)
+            self.profile_area.setWidget(profile_widget)
+            self.profile_area.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Download profile images and then populate the profile GUI.
+        profile = self.session.profile
+        self.download_thread = DownloadPhotosThread(profile.photos)
+        self.download_thread.data_downloaded.connect(populate)
+        self.download_thread.start()
 
     def refresh_users(self, list_area, refresh_button):
         def nearby_users_fetched(data):
@@ -314,6 +576,7 @@ class Window(QtGui.QMainWindow):
             else:
                 self.session = data
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
+                self.load_profile()  # Automatically load profile after session is ready.
 
         if self.txt_location.text() and self.txt_id.text() and self.txt_auth.text():
             self.session_thread = SessionThread(self.txt_id.text(), self.txt_auth.text(), self.txt_location.text())
