@@ -1,16 +1,16 @@
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
-from pinsey.ImageWindow import ImageWindow
+from PyQt4 import QtGui, QtCore
 from pinsey.Utils import clickable, center, horizontal_line, EMOJI_PATTERN
+from pinsey.gui.ImageWindow import ImageWindow
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
-from PyQt4 import QtGui, QtCore
 
 
-class Window(QtGui.QMainWindow):
+class MainWindow(QtGui.QMainWindow):
     def __init__(self):
-        super(Window, self).__init__()
+        super(MainWindow, self).__init__()
 
         # Constants.
         self.CSS_FONT_EMOJI = "font-family: 'Segoe UI Symbol', sans;"  # Segoe as a Windows-friendly font for emoji.

@@ -1,8 +1,7 @@
 import sys
-from pinsey.Window import Window
 from PyQt4 import QtGui
-
+from pinsey.gui.MainWindow import MainWindow
 
 app = QtGui.QApplication(sys.argv)
-gui = Window()
+gui = MainWindow()
 sys.exit(app.exec_())
