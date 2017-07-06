@@ -42,7 +42,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('Pinsey')
         self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
         self.setMinimumWidth(500)
-        self.minimumHeight()
+        self.resize(800, 480)
         center(self)
 
         # Run startup methods to setup the GUI.

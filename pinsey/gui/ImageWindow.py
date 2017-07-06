@@ -2,7 +2,7 @@ import html
 import webbrowser
 
 from PyQt4 import QtGui
-from pinsey.Utils import clickable
+from pinsey.Utils import clickable, center
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
@@ -15,8 +15,8 @@ class ImageWindow(QtGui.QMainWindow):
         self.label_name = QtGui.QLabel(name)
         self.label_count = QtGui.QLabel()
         self.label_pic = QtGui.QLabel()
-        self.label_pic.setFixedWidth(800)
-        self.label_pic.setFixedHeight(800)
+        self.label_pic.setFixedWidth(600)
+        self.label_pic.setFixedHeight(600)
         self.label_pic.setScaledContents(True)
         clickable(self.label_pic).connect(self.draw)
 
@@ -27,6 +27,9 @@ class ImageWindow(QtGui.QMainWindow):
         self.setCentralWidget(QtGui.QLabel('Fetching images of ' + name + '...'))
         self.setWindowTitle('Pinsey: Pictures of ' + name)
         self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
+        self.setFixedWidth(620)
+        self.setFixedHeight(640)
+        center(self)
         self.show()
 
     def ready(self, data):

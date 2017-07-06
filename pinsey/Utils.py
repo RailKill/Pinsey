@@ -34,7 +34,7 @@ def clickable(widget):
 def center(window):
     screen = QtGui.QDesktopWidget().screenGeometry()
     size = window.geometry()
-    window.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
+    window.move((screen.width() / 2) - (size.width() / 2), (screen.height() / 2) - (size.height() / 2))
 
 
 def horizontal_line():
