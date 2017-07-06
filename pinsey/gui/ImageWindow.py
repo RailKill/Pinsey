@@ -53,15 +53,18 @@ class ImageWindow(QtGui.QMainWindow):
         pic.loadFromData(self.photo_list[self.current_image_count].data)
         self.label_pic.setPixmap(QtGui.QPixmap(pic))
 
-        btn_google = QtGui.QPushButton('Google This', self)
-        btn_google.clicked.connect(
-            lambda web_search: (webbrowser.open('http://www.google.com/searchbyimage?image_url='
-                                                + html.escape(self.photo_list[self.current_image_count].url))))
-
         # Setup the layout and return the widget with this layout.
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(self.label_name)
-        hbox.addWidget(btn_google)
+
+        # Google search functionality only supported for web URLs for now. Local images have to upload manually.
+        if not self.photo_list[self.current_image_count].url.startswith('file:'):
+            btn_google = QtGui.QPushButton('Google This', self)
+            btn_google.clicked.connect(
+                lambda web_search: (webbrowser.open('http://www.google.com/searchbyimage?image_url='
+                                                    + html.escape(self.photo_list[self.current_image_count].url))))
+            hbox.addWidget(btn_google)
+
         hbox.addStretch(1)
         hbox.addWidget(self.label_count)
 

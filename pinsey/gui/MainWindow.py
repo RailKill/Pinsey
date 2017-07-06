@@ -3,6 +3,7 @@ from configparser import DuplicateSectionError
 from PyQt4 import QtGui, QtCore
 from pinsey.Utils import clickable, center, horizontal_line, EMOJI_PATTERN
 from pinsey.gui.ImageWindow import ImageWindow
+from pinsey.handler.LikesHandler import LikesHandler
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
@@ -36,13 +37,13 @@ class MainWindow(QtGui.QMainWindow):
         # Initialize application variables.
         self.windows = []
         self.session = None
+        self.download_thread = None
+        self.likes_handler = LikesHandler()
         self.setWindowTitle('Pinsey')
         self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
         self.setMinimumWidth(500)
         self.minimumHeight()
         center(self)
-
-        self.download_thread = None
 
         # Run startup methods to setup the GUI.
         self.read_settings()
@@ -58,29 +59,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def setup_tabs(self):
         tabs = QtGui.QTabWidget()
-
-        tab_liked = QtGui.QWidget()
-        la = QtGui.QWidget()
-        la.setLayout(QtGui.QVBoxLayout())
-        boton = QtGui.QPushButton('Top', self)
-        boton.clicked.connect(lambda: (sc.setWidget(QtGui.QWidget()), print('clicked')))
-        for _ in range(10):
-            card = QtGui.QWidget()
-            card.setLayout(QtGui.QGridLayout())
-            card.layout().setSpacing(10)
-            card.layout().addWidget(QtGui.QPushButton('thumb', self), 1, 0, 4, 1)
-            card.layout().addWidget(QtGui.QLabel('name'), 1, 1)
-            card.layout().addWidget(QtGui.QLabel('school'), 2, 1)
-            card.layout().addWidget(QtGui.QLabel('job'), 3, 1)
-            card.layout().addWidget(QtGui.QTextEdit('bio'), 4, 1)
-            la.layout().addWidget(card)
-        sc = QtGui.QScrollArea()
-        sc.setWidget(la)
-        tab_liked.setLayout(QtGui.QVBoxLayout())
-        tab_liked.layout().addWidget(boton)
-        tab_liked.layout().addWidget(sc)
-
-        tab_disliked = QtGui.QWidget()
         tab_matches = QtGui.QWidget()
 
         # Resize width and height
@@ -89,9 +67,9 @@ class MainWindow(QtGui.QMainWindow):
         # Add tabs
         tabs.addTab(self.setup_settings(), 'Settings')
         tabs.addTab(self.setup_profile(), 'Profile')
-        tabs.addTab(tab_liked, 'Liked')
-        tabs.addTab(tab_disliked, 'Disliked')
-        tabs.addTab(self.setup_browse(), 'Browse')
+        tabs.addTab(self.setup_userlisting('Reload', self.reload_likes), 'Liked')
+        tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes), 'Disliked')
+        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users), 'Browse')
         tabs.addTab(tab_matches, 'Matches')
 
         # Set main window layout
@@ -163,16 +141,16 @@ class MainWindow(QtGui.QMainWindow):
         tab_profile.layout().addWidget(self.profile_area)
         return tab_profile
 
-    def setup_browse(self):
-        tab_browse = QtGui.QWidget()
+    def setup_userlisting(self, refresh_text, refresh_function):
+        tab_userlist = QtGui.QWidget()
         scroll = QtGui.QScrollArea()
-        btn_refresh = QtGui.QPushButton('Refresh', self)
-        btn_refresh.clicked.connect(lambda: (self.refresh_users(scroll, btn_refresh)))
-        tab_browse.setLayout(QtGui.QVBoxLayout())
-        tab_browse.layout().addWidget(btn_refresh)
-        tab_browse.layout().addWidget(scroll)
-        self.refresh_users(scroll, btn_refresh)
-        return tab_browse
+        btn_refresh = QtGui.QPushButton(refresh_text, self)
+        btn_refresh.clicked.connect(lambda: (refresh_function(scroll, btn_refresh)))
+        tab_userlist.setLayout(QtGui.QVBoxLayout())
+        tab_userlist.layout().addWidget(btn_refresh)
+        tab_userlist.layout().addWidget(scroll)
+        refresh_function(scroll, btn_refresh)
+        return tab_userlist
 
     def load_profile(self):
         def populate(data):
@@ -429,7 +407,15 @@ class MainWindow(QtGui.QMainWindow):
         def nearby_users_fetched(data):
             refresh_button.setText('Refresh')
             refresh_button.setDisabled(False)
-            list_area.setWidget(self.populate_users(data))
+            if data:
+                list_area.setWidget(self.populate_users(data, False))
+            else:
+                # No more users to go through. Reset the distance filter so the session will fetch the users again.
+                self.session.profile.distance_filter = self.session.profile.distance_filter
+                no_more_widget = QtGui.QWidget()
+                no_more_widget.setLayout(QtGui.QHBoxLayout())
+                no_more_widget.layout().addWidget(QtGui.QLabel('No more users to show for now.'))
+                list_area.setWidget(no_more_widget)
 
         if self.session:
             nearby_users = NearbyUsersThread(self.session)
@@ -455,7 +441,7 @@ class MainWindow(QtGui.QMainWindow):
             noauth.layout().addWidget(label_noauth)
             list_area.setWidget(noauth)
 
-    def populate_users(self, user_list):
+    def populate_users(self, user_list, is_history):
         user_list_widget = QtGui.QWidget()
         user_list_widget.setLayout(QtGui.QVBoxLayout())
 
@@ -496,11 +482,6 @@ class MainWindow(QtGui.QMainWindow):
             label_distance = QtGui.QLabel('<b>Distance: </b>' + "{0:.2f}".format(user.distance_km) + 'km')
             label_distance.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-            # Last Ping (Last Known Active Time)
-            ping = user.ping_time[:-5].split('T')  # Removes the last few characters and splits the date and time.
-            label_ping = QtGui.QLabel('<b>Last Seen: </b>' + ping[1] + ' on ' + ping[0])
-            label_ping.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
             # Schools
             if user.schools:
                 schools = ", ".join(str(x) for x in user.schools)
@@ -525,30 +506,57 @@ class MainWindow(QtGui.QMainWindow):
             txt_bio.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
             txt_bio.setStyleSheet(self.CSS_FONT_EMOJI)
 
-            # Like, dislike and super like buttons.
-            btn_like = QtGui.QPushButton('Like', self)
-            #btn_like.clicked.connect(user.like)
-            btn_dislike = QtGui.QPushButton('Dislike', self)
-            #btn_like.clicked.connect(user.dislike)
-            btn_superlike = QtGui.QPushButton('Super Like', self)
-            #btn_like.clicked.connect(user.superlike)
-            like_buttons_layout = QtGui.QHBoxLayout()
-            like_buttons_layout.addWidget(btn_like)
-            like_buttons_layout.addWidget(btn_dislike)
-            like_buttons_layout.addWidget(btn_superlike)
-
             card = QtGui.QWidget()
             card_layout = QtGui.QGridLayout()
             card_layout.setSpacing(10)
-            card_layout.addWidget(label_thumbnail, 1, 0, 8, 1)
+            card_layout.addWidget(label_thumbnail, 1, 0, 7, 1)
             card_layout.addWidget(label_name, 1, 1)
             card_layout.addWidget(label_dob, 2, 1)
             card_layout.addWidget(label_distance, 3, 1)
-            card_layout.addWidget(label_ping, 4, 1)
-            card_layout.addWidget(label_schools, 5, 1)
-            card_layout.addWidget(label_jobs, 6, 1)
-            card_layout.addWidget(txt_bio, 7, 1)
-            card_layout.addLayout(like_buttons_layout, 8, 1)
+            card_layout.addWidget(label_schools, 4, 1)
+            card_layout.addWidget(label_jobs, 5, 1)
+            card_layout.addWidget(txt_bio, 6, 1)
+
+            like_buttons_layout = QtGui.QHBoxLayout()
+            if not is_history:
+                # Like, dislike and super like buttons.
+                btn_like = QtGui.QPushButton('Like', self)
+                btn_dislike = QtGui.QPushButton('Dislike', self)
+                btn_superlike = QtGui.QPushButton('Super Like', self)
+                # 'ignore' is just a name to store and ignore the boolean that comes from the assigning the user
+                # parameter into the lambda scope. Do not remove, required to work.
+                btn_like.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
+                    self.likes_handler.like_user(u),
+                    l.setEnabled(False),
+                    d.setEnabled(False),
+                    s.setEnabled(False)
+                ))
+                btn_dislike.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
+                    self.likes_handler.dislike_user(u),
+                    l.setEnabled(False),
+                    d.setEnabled(False),
+                    s.setEnabled(False)
+                ))
+                btn_superlike.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
+                    self.likes_handler.superlike_user(u),
+                    l.setEnabled(False),
+                    d.setEnabled(False),
+                    s.setEnabled(False)
+                ))
+
+                like_buttons_layout.addWidget(btn_like)
+                like_buttons_layout.addWidget(btn_dislike)
+                like_buttons_layout.addWidget(btn_superlike)
+            else:
+                btn_delete = QtGui.QPushButton('Delete', self)
+                btn_delete.clicked.connect(lambda ignore, u=user, b=btn_delete: (
+                    self.likes_handler.delete_history(u),
+                    b.setText('Deleted'),
+                    b.setEnabled(False)
+                ))
+                like_buttons_layout.addWidget(btn_delete)
+
+            card_layout.addLayout(like_buttons_layout, 7, 1)
             card.setLayout(card_layout)
             user_list_widget.layout().addWidget(card)
 
@@ -626,6 +634,12 @@ class MainWindow(QtGui.QMainWindow):
             self.chk_respond_list.setChecked(config.getboolean('Chat', 'respond_list'))
             self.chk_respond_bot.setChecked(config.getboolean('Chat', 'respond_bot'))
             self.txt_pickup_threshold.setText(config.get('Chat', 'pickup_threshold'))
+
+    def reload_likes(self, list_area, *_):
+        list_area.setWidget(self.populate_users(self.likes_handler.get_likes(), True))
+
+    def reload_dislikes(self, list_area, *_):
+        list_area.setWidget(self.populate_users(self.likes_handler.get_dislikes(), True))
 
     def save_settings(self):
         config = ConfigParser()
