@@ -548,12 +548,16 @@ class MainWindow(QtGui.QMainWindow):
                 like_buttons_layout.addWidget(btn_dislike)
                 like_buttons_layout.addWidget(btn_superlike)
             else:
+                label_date_added = QtGui.QLabel('<b>Date Added: </b>' +
+                                                user.date_added.strftime("%B %d, %Y at %I:%M%p"))
+                label_date_added.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
                 btn_delete = QtGui.QPushButton('Delete', self)
                 btn_delete.clicked.connect(lambda ignore, u=user, b=btn_delete: (
                     self.likes_handler.delete_history(u),
                     b.setText('Deleted'),
                     b.setEnabled(False)
                 ))
+                like_buttons_layout.addWidget(label_date_added)
                 like_buttons_layout.addWidget(btn_delete)
 
             card_layout.addLayout(like_buttons_layout, 7, 1)

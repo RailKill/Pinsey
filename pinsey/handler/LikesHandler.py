@@ -4,6 +4,7 @@ import dateutil
 import glob
 import os
 import shutil
+from datetime import datetime
 from munch import munchify
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
@@ -17,7 +18,7 @@ class LikesHandler:
         self.dislikes_filepath = 'dislikes.csv'
         self.photo_storage_path = '../images/'
         self.fieldnames = ['id', 'name', 'gender', 'age', 'birth_date', 'bio', 'jobs', 'schools', 'distance_km',
-                           'common_connections', 'common_likes']
+                           'common_connections', 'common_likes', 'date_added']
 
         # Every time the CSV files are read, the Munchy user object is stored in this history dictionary.
         self.history = {self.likes_filepath: [], self.dislikes_filepath: []}
@@ -92,6 +93,7 @@ class LikesHandler:
                     user = munchify(row)
                     user.age = int(user.age)
                     user.birth_date = dateutil.parser.parse(user.birth_date)
+                    user.date_added = dateutil.parser.parse(user.date_added)
                     user.distance_km = float(user.distance_km)
                     user.jobs = ast.literal_eval(user.jobs)
                     user.photos = glob.glob(self.photo_storage_path + user.id + '/*.jpg')
@@ -138,6 +140,7 @@ class LikesHandler:
                 user_dict['age'] = user.age
                 user_dict['distance_km'] = user.distance_km
                 user_dict['gender'] = user.gender
+                user_dict['date_added'] = datetime.now()
                 writer.writerow(user_dict)
 
         # Download the images for storing.
