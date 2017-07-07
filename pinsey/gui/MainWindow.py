@@ -10,7 +10,7 @@ from pinsey.thread.SessionThread import SessionThread
 
 
 class MainWindow(QtGui.QMainWindow):
-    def __init__(self):
+    def __init__(self, app):
         super(MainWindow, self).__init__()
 
         # Constants.
@@ -18,6 +18,7 @@ class MainWindow(QtGui.QMainWindow):
         self.CSS_FONT_HEADLINE = "font-size: xx-large; font-weight: bold;"  # Used for big headings.
         self.CSS_FONT_CATEGORY = "color: blue; font-weight: bold;"  # Used for category headings.
         self.THUMBNAIL_SIZE = 300  # Size of the thumbnail picture squares in pixels.
+        self.ICON_FILEPATH = '../resources/icons/logo-128x128.png'  # File path of the application's logo/icon.
 
         # Initialize Window GUI controls.
         self.label_status = QtGui.QLabel()
@@ -34,13 +35,25 @@ class MainWindow(QtGui.QMainWindow):
         self.chk_respond_bot = QtGui.QCheckBox('Respond using Cleverbot', self)
         self.profile_area = QtGui.QScrollArea()
 
+        # Initialize system tray icon and menu.
+        tray_menu = QtGui.QMenu()
+        restore_action = tray_menu.addAction('Restore')
+        restore_action.triggered.connect(self.restore_window)
+        close_action = tray_menu.addAction('Exit')
+        close_action.triggered.connect(self.close)
+        self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(self.ICON_FILEPATH))
+        self.tray_icon.activated.connect(self.tray_event)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.hide()
+
         # Initialize application variables.
+        self.app = app
         self.windows = []
         self.session = None
         self.download_thread = None
         self.likes_handler = LikesHandler()
         self.setWindowTitle('Pinsey')
-        self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
+        self.setWindowIcon(QtGui.QIcon(self.ICON_FILEPATH))
         self.setMinimumWidth(500)
         self.resize(800, 480)
         center(self)
@@ -459,7 +472,7 @@ class MainWindow(QtGui.QMainWindow):
                 # IMPORTANT: lambda user=user forces a capture of the variable into the anonymous scope. Don't remove.
                 # Otherwise, the 'user' variable will just be a reference, and won't reflect the user assigned in loop.
                 clickable(label_thumbnail).connect(lambda user=user:
-                                                   (self.windows.append(ImageWindow(user.name, user.photos))))
+                                                   (self.windows.append(ImageWindow(user.name, user.photos, self))))
             except Exception as ex:
                 print('User population error: ' + str(ex))  # Doesn't matter, ignore if this user fails to populate.
                 continue
@@ -576,6 +589,30 @@ class MainWindow(QtGui.QMainWindow):
     def closeEvent(self, event):
         for window in self.windows:
             window.close()  # Close all windows associated with this window.
+        super(MainWindow, self).closeEvent(event)
+        self.app.exit()
+
+    def changeEvent(self, event):
+        if event.type() == QtCore.QEvent.WindowStateChange:
+            if self.windowState() == QtCore.Qt.WindowMinimized:
+                for window in self.windows:
+                    window.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
+                    window.hide()  # Hides all windows associated with this window.
+                self.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
+                self.hide()
+                self.tray_icon.show()
+
+    def tray_event(self, reason):
+        if reason == QtGui.QSystemTrayIcon.DoubleClick:
+            self.restore_window()
+
+    def restore_window(self):
+        self.tray_icon.hide()
+        for window in self.windows:
+            window.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
+            window.showNormal()
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
+        self.showNormal()
 
     def connect_tinder(self):
         status_text = 'Tinder Status: '

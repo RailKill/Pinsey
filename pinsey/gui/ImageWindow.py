@@ -7,8 +7,9 @@ from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
 class ImageWindow(QtGui.QMainWindow):
-    def __init__(self, name, image_urls):
+    def __init__(self, name, image_urls, main_window):
         super(ImageWindow, self).__init__()
+        self.main_window = main_window
         self.photo_list = []
         self.current_image_count = -1  # Initialize at negative 1, so the index will start at 0 during update_image().
         self.maximum_image_count = len(image_urls)
@@ -28,9 +29,13 @@ class ImageWindow(QtGui.QMainWindow):
         self.setWindowTitle('Pinsey: Pictures of ' + name)
         self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
         self.setFixedWidth(620)
-        self.setFixedHeight(640)
+        self.setFixedHeight(660)
         center(self)
         self.show()
+
+    def closeEvent(self, event):
+        self.main_window.windows.remove(self)
+        super(ImageWindow, self).closeEvent(event)
 
     def ready(self, data):
         self.photo_list = data
