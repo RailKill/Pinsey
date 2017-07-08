@@ -2,6 +2,7 @@ import html
 import webbrowser
 
 from PyQt4 import QtGui
+from pinsey.Constants import ICON_FILEPATH
 from pinsey.Utils import clickable, center
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
@@ -27,7 +28,7 @@ class ImageWindow(QtGui.QMainWindow):
         download_photos.start()
         self.setCentralWidget(QtGui.QLabel('Fetching images of ' + name + '...'))
         self.setWindowTitle('Pinsey: Pictures of ' + name)
-        self.setWindowIcon(QtGui.QIcon('../resources/icons/logo-128x128.png'))
+        self.setWindowIcon(QtGui.QIcon(ICON_FILEPATH))
         self.setFixedWidth(620)
         self.setFixedHeight(660)
         center(self)

@@ -1,24 +1,20 @@
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from PyQt4 import QtGui, QtCore
-from pinsey.Utils import clickable, center, horizontal_line, EMOJI_PATTERN
+from pinsey import Constants
+from pinsey.Utils import clickable, center, picture_grid, horizontal_line, name_set, UserInformationWidgetStack
 from pinsey.gui.ImageWindow import ImageWindow
+from pinsey.gui.MessageWindow import MessageWindow
 from pinsey.handler.LikesHandler import LikesHandler
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
+from pinsey.thread.MatchesThread import MatchesThread
 
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, app):
         super(MainWindow, self).__init__()
-
-        # Constants.
-        self.CSS_FONT_EMOJI = "font-family: 'Segoe UI Symbol', sans;"  # Segoe as a Windows-friendly font for emoji.
-        self.CSS_FONT_HEADLINE = "font-size: xx-large; font-weight: bold;"  # Used for big headings.
-        self.CSS_FONT_CATEGORY = "color: blue; font-weight: bold;"  # Used for category headings.
-        self.THUMBNAIL_SIZE = 300  # Size of the thumbnail picture squares in pixels.
-        self.ICON_FILEPATH = '../resources/icons/logo-128x128.png'  # File path of the application's logo/icon.
 
         # Initialize Window GUI controls.
         self.label_status = QtGui.QLabel()
@@ -34,6 +30,7 @@ class MainWindow(QtGui.QMainWindow):
         self.chk_respond_list = QtGui.QCheckBox('Respond from List', self)
         self.chk_respond_bot = QtGui.QCheckBox('Respond using Cleverbot', self)
         self.profile_area = QtGui.QScrollArea()
+        self.matches_area = QtGui.QScrollArea()
 
         # Initialize system tray icon and menu.
         tray_menu = QtGui.QMenu()
@@ -41,7 +38,7 @@ class MainWindow(QtGui.QMainWindow):
         restore_action.triggered.connect(self.restore_window)
         close_action = tray_menu.addAction('Exit')
         close_action.triggered.connect(self.close)
-        self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(self.ICON_FILEPATH))
+        self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.tray_icon.activated.connect(self.tray_event)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.hide()
@@ -50,10 +47,11 @@ class MainWindow(QtGui.QMainWindow):
         self.app = app
         self.windows = []
         self.session = None
-        self.download_thread = None
+        self.download_thread = []
+        self.matches_thread = None
         self.likes_handler = LikesHandler()
         self.setWindowTitle('Pinsey')
-        self.setWindowIcon(QtGui.QIcon(self.ICON_FILEPATH))
+        self.setWindowIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.setMinimumWidth(500)
         self.resize(800, 480)
         center(self)
@@ -72,8 +70,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def setup_tabs(self):
         tabs = QtGui.QTabWidget()
-        tab_matches = QtGui.QWidget()
-
         # Resize width and height
         tabs.resize(250, 150)
 
@@ -83,7 +79,7 @@ class MainWindow(QtGui.QMainWindow):
         tabs.addTab(self.setup_userlisting('Reload', self.reload_likes), 'Liked')
         tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes), 'Disliked')
         tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users), 'Browse')
-        tabs.addTab(tab_matches, 'Matches')
+        tabs.addTab(self.setup_matches(), 'Matches')
 
         # Set main window layout
         self.setCentralWidget(tabs)
@@ -113,9 +109,9 @@ class MainWindow(QtGui.QMainWindow):
         self.txt_face_threshold.setValidator(QtGui.QIntValidator())
         self.txt_bio_threshold.setValidator(QtGui.QIntValidator())
         self.txt_pickup_threshold.setValidator(QtGui.QIntValidator())
-        self.chk_decision.setStyleSheet(self.CSS_FONT_CATEGORY)
+        self.chk_decision.setStyleSheet(Constants.CSS_FONT_CATEGORY)
         self.chk_decision.stateChanged.connect(self.decision_change)
-        self.chk_autochat.setStyleSheet(self.CSS_FONT_CATEGORY)
+        self.chk_autochat.setStyleSheet(Constants.CSS_FONT_CATEGORY)
 
         grid = QtGui.QGridLayout()
         grid.setSpacing(10)
@@ -165,64 +161,29 @@ class MainWindow(QtGui.QMainWindow):
         refresh_function(scroll, btn_refresh)
         return tab_userlist
 
+    def setup_matches(self):
+        tab_matches = QtGui.QWidget()
+        tab_matches.setLayout(QtGui.QVBoxLayout())
+        tab_matches.layout().addWidget(self.matches_area)
+        return tab_matches
+
     def load_profile(self):
-        def populate(data):
+        def populate(data, thread):
+            self.download_thread.remove(thread)
             profile_widget = QtGui.QWidget()
 
             # 1. Profile picture grid.
-            pp_layout = QtGui.QGridLayout()
-            pp_layout.setSpacing(1)
-            number_of_photos_allowed = 6
-            photos_half_amount = number_of_photos_allowed / 2
-            photos_median = number_of_photos_allowed - photos_half_amount - 1
-            median_section_count = 0
-            last_section_count = 0
-
-            for i in range(number_of_photos_allowed):
-                image = QtGui.QImage()
-                label = QtGui.QLabel()
-
-                # Load profile photo data.
-                label.setScaledContents(True)
-                if i < len(data):
-                    image.loadFromData(data[i].data)
-                    label.setPixmap(QtGui.QPixmap(image))
-                else:
-                    label.setText(str(i + 1))
-                    label.setAlignment(QtCore.Qt.AlignCenter)
-                    label.setStyleSheet('border: 1px solid')
-
-                # Determine photo size for grid arrangement.
-                size = self.THUMBNAIL_SIZE
-                if i >= photos_half_amount:
-                    size /= photos_half_amount
-                    pp_layout.addWidget(label, last_section_count * photos_median, 2, photos_median, 1)
-                    last_section_count += 1
-                elif i > 0:
-                    size /= photos_median
-                    pp_layout.addWidget(label, median_section_count *  photos_half_amount, 1, photos_half_amount, 1)
-                    median_section_count += 1
-                else:
-                    pp_layout.addWidget(label, 0, 0, photos_half_amount * photos_median, 1)
-                label.setFixedWidth(size)
-                label.setFixedHeight(size)
+            number_of_photos = Constants.NUMBER_OF_PHOTOS
+            pp_layout = picture_grid(data, Constants.THUMBNAIL_SIZE, number_of_photos)
 
             # 2. Name and gender of user.
-            if profile.gender == 'female':
-                gender_string = '<span style="color: DeepPink;' + self.CSS_FONT_EMOJI + '"> ♀ </span>'
-            else:
-                gender_string = '<span style="color: DodgerBlue;' + self.CSS_FONT_EMOJI + '"> ♂ </span>'
-            banned_string = '<span style="color: Red;"> [BANNED] </span>' if profile.banned else ''
-            name_string = '<span style="' + self.CSS_FONT_HEADLINE + '">' + profile.name + gender_string + \
-                          banned_string + '</span>'
-            label_name = QtGui.QLabel(name_string)
-            label_name.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-            pp_layout.addWidget(label_name, number_of_photos_allowed, 0, 1, number_of_photos_allowed)
+            label_name = name_set(profile.name, profile.gender, 0, profile.banned)
+            pp_layout.addWidget(label_name, number_of_photos, 0, 1, number_of_photos)
 
             # 3. Biography.
             def bio_truncate():
                 # Tinder counts emojis as 2 characters. Find and manipulate them so the character count is correct.
-                emoji_raw = EMOJI_PATTERN.findall(txt_bio.toPlainText())
+                emoji_raw = Constants.EMOJI_PATTERN.findall(txt_bio.toPlainText())
                 number_of_emojis = 0
                 for emoji in emoji_raw:
                     number_of_emojis += len(emoji)
@@ -244,20 +205,20 @@ class MainWindow(QtGui.QMainWindow):
             bio_widget.layout().addWidget(label_bio)
             bio_widget.layout().addStretch()
             bio_widget.layout().addWidget(label_chars)
-            pp_layout.addWidget(bio_widget, number_of_photos_allowed + 1, 0, 1, number_of_photos_allowed)
+            pp_layout.addWidget(bio_widget, number_of_photos + 1, 0, 1, number_of_photos)
 
             txt_bio = QtGui.QPlainTextEdit(profile.bio)
             txt_bio.setFont(QtGui.QFont('Segoe UI Symbol', 16))
             txt_bio.textChanged.connect(bio_truncate)
             bio_truncate()
-            pp_layout.addWidget(txt_bio, number_of_photos_allowed + 2, 0, 1, number_of_photos_allowed)
+            pp_layout.addWidget(txt_bio, number_of_photos + 2, 0, 1, number_of_photos)
 
             # Form layout setup.
             form_layout = QtGui.QFormLayout()
             # form_layout.setLabelAlignment(QtCore.Qt.AlignRight)
             form_widget = QtGui.QWidget()
             form_widget.setLayout(form_layout)
-            pp_layout.addWidget(form_widget, number_of_photos_allowed + 3, 0, 1, number_of_photos_allowed)
+            pp_layout.addWidget(form_widget, number_of_photos + 3, 0, 1, number_of_photos)
             form_label_style = 'margin-top: 0.3em'
 
             # 4. Gender
@@ -363,7 +324,7 @@ class MainWindow(QtGui.QMainWindow):
                 # Workaround due to pynder 0.0.13 not yet supporting "gender" and "interested in" changes.
                 gender_filter = 2
                 profile.interested = []
-                profile.sex = 0 if radio_gender_male.isChecked() else 1
+                profile.sex = (0, 'male') if radio_gender_male.isChecked() else (1, 'female')
                 if chk_interested_male.isChecked():
                     gender_filter -= 2
                     profile.interested.append(0)
@@ -373,7 +334,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.session.update_profile({
                     "interested_in": profile.interested,
                     "gender_filter": gender_filter,
-                    "gender": profile.sex
+                    "gender": profile.sex[0]
                     # "squads_discoverable": False
                 })
 
@@ -382,12 +343,7 @@ class MainWindow(QtGui.QMainWindow):
 
             def reload_profile():
                 # Refresh GUI.
-                if profile.sex == 'female':
-                    reload_gender_string = '<span style="color: DeepPink;' + self.CSS_FONT_EMOJI + '"> ♀ </span>'
-                else:
-                    reload_gender_string = '<span style="color: DodgerBlue;' + self.CSS_FONT_EMOJI + '"> ♂ </span>'
-                label_name.setText('<span style="' + self.CSS_FONT_HEADLINE + '">' +
-                                   profile.name + reload_gender_string + banned_string + '</span>')
+                label_name.setText(name_set(profile.name, profile.sex[1], 0, profile.banned).text())
                 txt_bio.setPlainText(profile.bio)
                 chk_discoverable.setChecked(profile.discoverable)
                 slider_distance.setValue(profile.distance_filter)
@@ -404,7 +360,7 @@ class MainWindow(QtGui.QMainWindow):
             btn_save_profile = QtGui.QPushButton('Update Profile')
             btn_save_profile.setFixedHeight(50)
             btn_save_profile.clicked.connect(save_profile)
-            pp_layout.addWidget(btn_save_profile, number_of_photos_allowed + 4, 0, 1, number_of_photos_allowed)
+            pp_layout.addWidget(btn_save_profile, number_of_photos + 4, 0, 1, number_of_photos)
 
             profile_widget.setLayout(pp_layout)
             self.profile_area.setWidget(profile_widget)
@@ -412,9 +368,69 @@ class MainWindow(QtGui.QMainWindow):
 
         # Download profile images and then populate the profile GUI.
         profile = self.session.profile
-        self.download_thread = DownloadPhotosThread(profile.photos)
-        self.download_thread.data_downloaded.connect(populate)
-        self.download_thread.start()
+        download_thread = DownloadPhotosThread(profile.photos)
+        download_thread.data_downloaded.connect(lambda data, thread=download_thread: populate(data, thread))
+        self.download_thread.append(download_thread)
+        download_thread.start()
+
+    def load_matches(self):
+        def load_thumbnail(photo, label, thread):
+            self.download_thread.remove(thread)
+            thumbnail = QtGui.QImage()
+            thumbnail.loadFromData(photo[0].data)
+            label.setPixmap(QtGui.QPixmap(thumbnail))
+
+        def populate_matches(matches):
+            updates = self.session.updates()
+            matches_list = QtGui.QWidget()
+            matches_list.setLayout(QtGui.QVBoxLayout())
+            for match in matches:
+                # Load thumbnail of match.
+                label_thumbnail = QtGui.QLabel()
+                label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE / 2)
+                label_thumbnail.setFixedHeight(Constants.THUMBNAIL_SIZE / 2)
+                label_thumbnail.setScaledContents(True)
+                download_thread = DownloadPhotosThread([match.user.photos[0]])
+                download_thread.data_downloaded.connect(
+                    lambda data, l=label_thumbnail, t=download_thread: load_thumbnail(data, l, t)
+                )
+                self.download_thread.append(download_thread)
+                download_thread.start()
+
+                # Create name set.
+                label_name = name_set(match.user.name, match.user.gender, match.user.age)
+                # Create match date label.
+                label_match_date = QtGui.QLabel('<b>Match Date: </b>' + match.match_date)
+                # Create last message text.
+                label_last_message = QtGui.QLabel(match.messages[0] if match.messages else 'Conversation not started.')
+                # Create notification text.
+                label_notification = QtGui.QLabel('NEW UPDATE!' if match in updates else '')
+                label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
+
+                # Create a card for each match.
+                card_widget = QtGui.QWidget()
+                card_layout = QtGui.QGridLayout()
+                card_layout.setSpacing(10)
+                card_layout.addWidget(label_thumbnail, 1, 0, 5, 1)
+                card_layout.addWidget(label_name, 1, 1)
+                card_layout.addWidget(label_match_date, 2, 1)
+                card_layout.addWidget(label_last_message, 3, 1)
+                card_layout.addWidget(label_notification, 4, 1)
+                card_widget.setLayout(card_layout)
+                clickable(card_widget).connect(lambda m=match: (self.windows.append(MessageWindow(m, self))))
+                matches_list.layout().addWidget(card_widget)
+
+                # Check if any MessageWindow for this match. If there is, update the messages area.
+                for window in self.main_window.windows:
+                    if isinstance(window, MessageWindow) and match == window.match:
+                        window.load_messages(match.messages)
+
+            self.matches_area.setWidget(matches_list)
+            self.matches_area.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.matches_thread = MatchesThread(self.session)
+        self.matches_thread.data_downloaded.connect(populate_matches)
+        self.matches_thread.start()
 
     def refresh_users(self, list_area, refresh_button):
         def nearby_users_fetched(data):
@@ -465,8 +481,8 @@ class MainWindow(QtGui.QMainWindow):
                 thumbnail = QtGui.QImage()
                 thumbnail.loadFromData(user.thumb_data)
                 label_thumbnail = QtGui.QLabel()
-                label_thumbnail.setFixedWidth(self.THUMBNAIL_SIZE)
-                label_thumbnail.setFixedHeight(self.THUMBNAIL_SIZE)
+                label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE)
+                label_thumbnail.setFixedHeight(Constants.THUMBNAIL_SIZE)
                 label_thumbnail.setScaledContents(True)
                 label_thumbnail.setPixmap(QtGui.QPixmap(thumbnail))
                 # IMPORTANT: lambda user=user forces a capture of the variable into the anonymous scope. Don't remove.
@@ -477,58 +493,17 @@ class MainWindow(QtGui.QMainWindow):
                 print('User population error: ' + str(ex))  # Doesn't matter, ignore if this user fails to populate.
                 continue
 
-            # Name
-            if user.gender.lower() == 'female':
-                gender_string = '<span style="color: DeepPink;' + self.CSS_FONT_EMOJI + '"> ♀ </span>'
-            else:
-                gender_string = '<span style="color: DodgerBlue;' + self.CSS_FONT_EMOJI + '"> ♂ </span>'
-            name_string = '<span style="' + self.CSS_FONT_HEADLINE + '">' + user.name \
-                          + gender_string + '(' + str(user.age) + ')' + '</span>'
-            label_name = QtGui.QLabel(name_string)
-            label_name.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
-            # Date of Birth
-            label_dob = QtGui.QLabel('<b>Birthday: </b>' + user.birth_date.strftime("%B %d, %Y"))
-            label_dob.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
-            # Distance
-            label_distance = QtGui.QLabel('<b>Distance: </b>' + "{0:.2f}".format(user.distance_km) + 'km')
-            label_distance.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
-            # Schools
-            if user.schools:
-                schools = ", ".join(str(x) for x in user.schools)
-            else:
-                schools = 'None.'
-            label_schools = QtGui.QLabel('<b>Schools: </b>' + schools)
-            label_schools.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
-            # Occupation
-            if user.jobs:
-                jobs = ", ".join(str(x) for x in user.jobs)
-            else:
-                jobs = 'None.'
-            label_jobs = QtGui.QLabel('<b>Occupation: </b>' + jobs)
-            label_jobs.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-
-            # Biography
-            if user.bio:
-                txt_bio = QtGui.QLabel(user.bio)
-            else:
-                txt_bio = QtGui.QLabel('No biography found.')
-            txt_bio.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-            txt_bio.setStyleSheet(self.CSS_FONT_EMOJI)
-
             card = QtGui.QWidget()
             card_layout = QtGui.QGridLayout()
             card_layout.setSpacing(10)
+            info_widgets = UserInformationWidgetStack(user)
             card_layout.addWidget(label_thumbnail, 1, 0, 7, 1)
-            card_layout.addWidget(label_name, 1, 1)
-            card_layout.addWidget(label_dob, 2, 1)
-            card_layout.addWidget(label_distance, 3, 1)
-            card_layout.addWidget(label_schools, 4, 1)
-            card_layout.addWidget(label_jobs, 5, 1)
-            card_layout.addWidget(txt_bio, 6, 1)
+            card_layout.addWidget(info_widgets.name_set, 1, 1)
+            card_layout.addWidget(info_widgets.dob, 2, 1)
+            card_layout.addWidget(info_widgets.distance, 3, 1)
+            card_layout.addWidget(info_widgets.schools, 4, 1)
+            card_layout.addWidget(info_widgets.jobs, 5, 1)
+            card_layout.addWidget(info_widgets.bio, 6, 1)
 
             like_buttons_layout = QtGui.QHBoxLayout()
             if not is_history:
@@ -626,6 +601,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.session = data
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
                 self.load_profile()  # Automatically load profile after session is ready.
+                self.load_matches()  # Automatically load matches after session is ready.
 
         if self.txt_location.text() and self.txt_id.text() and self.txt_auth.text():
             self.session_thread = SessionThread(self.txt_id.text(), self.txt_auth.text(), self.txt_location.text())
