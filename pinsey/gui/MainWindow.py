@@ -5,8 +5,10 @@ from pinsey import Constants
 from pinsey.Utils import clickable, center, picture_grid, horizontal_line, name_set, UserInformationWidgetStack
 from pinsey.gui.ImageWindow import ImageWindow
 from pinsey.gui.MessageWindow import MessageWindow
+from pinsey.handler.DecisionHandler import DecisionHandler
 from pinsey.handler.LikesHandler import LikesHandler
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
+from pinsey.thread.LikesBotThread import LikesBotThread
 from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
 from pinsey.thread.MatchesThread import MatchesThread
@@ -26,6 +28,8 @@ class MainWindow(QtGui.QMainWindow):
         self.txt_bio_threshold = QtGui.QLineEdit()
         self.txt_pickup_threshold = QtGui.QLineEdit()
         self.chk_decision = QtGui.QCheckBox('Decision-Making', self)
+        self.chk_exclude_friends = QtGui.QCheckBox('Exclude Facebook Friends', self)
+        self.chk_exclude_mutual = QtGui.QCheckBox('Exclude Mutual Friends', self)
         self.chk_autochat = QtGui.QCheckBox('Autonomous Chatting', self)
         self.chk_respond_list = QtGui.QCheckBox('Respond from List', self)
         self.chk_respond_bot = QtGui.QCheckBox('Respond using Cleverbot', self)
@@ -47,8 +51,10 @@ class MainWindow(QtGui.QMainWindow):
         self.app = app
         self.windows = []
         self.session = None
+        self.friend_list = []
         self.download_thread = []
         self.matches_thread = None
+        self.likes_bot = None
         self.likes_handler = LikesHandler()
         self.setWindowTitle('Pinsey')
         self.setWindowIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
@@ -91,16 +97,24 @@ class MainWindow(QtGui.QMainWindow):
         label_location = QtGui.QLabel('Location:')
         label_auth = QtGui.QLabel('Facebook Auth Token:')
         label_id = QtGui.QLabel('Facebook Profile ID:')
-        label_img_threshold = QtGui.QLabel('Image Search Threshold:')
+        label_img_threshold = QtGui.QLabel('Minimum Number of Good Images:')
         label_face_threshold = QtGui.QLabel('Faces Found Threshold:')
-        label_bio_threshold = QtGui.QLabel('Biography Threshold:')
+        label_bio_threshold = QtGui.QLabel('Biography Minimum Length:')
+        label_friend_exclusion = QtGui.QLabel('Friend Exclusion: ')
         label_pickup_threshold = QtGui.QLabel('Pick-up after X Messages:')
 
         btn_save = QtGui.QPushButton('Save Settings', self)
         btn_save.setFixedHeight(50)
         btn_save.clicked.connect(self.save_settings)
         btn_start = QtGui.QPushButton('Start Pinning', self)
+        btn_start.clicked.connect(lambda: self.start_botting(btn_start))
         btn_start.setFixedHeight(50)
+
+        exclusion_widget = QtGui.QWidget()
+        exclusion_widget.setLayout(QtGui.QHBoxLayout())
+        exclusion_widget.layout().addWidget(self.chk_exclude_friends)
+        exclusion_widget.layout().addWidget(self.chk_exclude_mutual)
+        exclusion_widget.layout().addStretch()
 
         self.label_status.setAlignment(QtCore.Qt.AlignCenter)
         self.txt_id.setEchoMode(QtGui.QLineEdit.Password)
@@ -131,15 +145,17 @@ class MainWindow(QtGui.QMainWindow):
         grid.addWidget(self.txt_face_threshold, 8, 1)
         grid.addWidget(label_bio_threshold, 9, 0)
         grid.addWidget(self.txt_bio_threshold, 9, 1)
-        grid.addWidget(horizontal_line(), 10, 0, 1, 2)
-        grid.addWidget(self.chk_autochat, 11, 0, 1, 2)
-        grid.addWidget(self.chk_respond_list, 12, 0, 1, 2)
-        grid.addWidget(self.chk_respond_bot, 13, 0, 1, 2)
-        grid.addWidget(label_pickup_threshold, 14, 0)
-        grid.addWidget(self.txt_pickup_threshold, 14, 1)
-        grid.addWidget(horizontal_line(), 15, 0, 1, 2)
-        grid.addWidget(btn_save, 16, 0)
-        grid.addWidget(btn_start, 16, 1)
+        grid.addWidget(label_friend_exclusion, 10, 0)
+        grid.addWidget(exclusion_widget, 10, 1)
+        grid.addWidget(horizontal_line(), 11, 0, 1, 2)
+        grid.addWidget(self.chk_autochat, 12, 0, 1, 2)
+        grid.addWidget(self.chk_respond_list, 13, 0, 1, 2)
+        grid.addWidget(self.chk_respond_bot, 14, 0, 1, 2)
+        grid.addWidget(label_pickup_threshold, 15, 0)
+        grid.addWidget(self.txt_pickup_threshold, 15, 1)
+        grid.addWidget(horizontal_line(), 16, 0, 1, 2)
+        grid.addWidget(btn_save, 17, 0)
+        grid.addWidget(btn_start, 17, 1)
 
         tab_settings.setLayout(grid)
         return tab_settings
@@ -417,7 +433,9 @@ class MainWindow(QtGui.QMainWindow):
                 card_layout.addWidget(label_last_message, 3, 1)
                 card_layout.addWidget(label_notification, 4, 1)
                 card_widget.setLayout(card_layout)
-                clickable(card_widget).connect(lambda m=match: (self.windows.append(MessageWindow(m, self))))
+                clickable(card_widget).connect(lambda m=match: (
+                    self.windows.append(MessageWindow(m, self, self.friend_list))
+                ))
                 matches_list.layout().addWidget(card_widget)
 
                 # Check if any MessageWindow for this match. If there is, update the messages area.
@@ -496,14 +514,15 @@ class MainWindow(QtGui.QMainWindow):
             card = QtGui.QWidget()
             card_layout = QtGui.QGridLayout()
             card_layout.setSpacing(10)
-            info_widgets = UserInformationWidgetStack(user)
-            card_layout.addWidget(label_thumbnail, 1, 0, 7, 1)
+            info_widgets = UserInformationWidgetStack(user, self.friend_list)
+            card_layout.addWidget(label_thumbnail, 1, 0, 8, 1)
             card_layout.addWidget(info_widgets.name_set, 1, 1)
             card_layout.addWidget(info_widgets.dob, 2, 1)
             card_layout.addWidget(info_widgets.distance, 3, 1)
-            card_layout.addWidget(info_widgets.schools, 4, 1)
-            card_layout.addWidget(info_widgets.jobs, 5, 1)
-            card_layout.addWidget(info_widgets.bio, 6, 1)
+            card_layout.addWidget(info_widgets.connections, 4, 1)
+            card_layout.addWidget(info_widgets.schools, 5, 1)
+            card_layout.addWidget(info_widgets.jobs, 6, 1)
+            card_layout.addWidget(info_widgets.bio, 7, 1)
 
             like_buttons_layout = QtGui.QHBoxLayout()
             if not is_history:
@@ -536,8 +555,16 @@ class MainWindow(QtGui.QMainWindow):
                 like_buttons_layout.addWidget(btn_dislike)
                 like_buttons_layout.addWidget(btn_superlike)
             else:
-                label_date_added = QtGui.QLabel('<b>Date Added: </b>' +
-                                                user.date_added.strftime("%B %d, %Y at %I:%M%p"))
+                if user.added_by.lower() == 'bot':
+                    added_by_style = "<span style='" + Constants.CSS_FONT_MESSAGE_MATCH + "font-size: large'>%s</span>"
+                else:
+                    added_by_style = "<span style='" + Constants.CSS_FONT_MESSAGE_YOU + "font-size: large'>%s</span>"
+
+                label_date_added = QtGui.QLabel(
+                    '<b>Date Added: </b>' +
+                    user.date_added.strftime("%B %d, %Y at %I:%M%p") + ' by ' +
+                    added_by_style % user.added_by
+                )
                 label_date_added.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
                 btn_delete = QtGui.QPushButton('Delete', self)
                 btn_delete.clicked.connect(lambda ignore, u=user, b=btn_delete: (
@@ -548,7 +575,7 @@ class MainWindow(QtGui.QMainWindow):
                 like_buttons_layout.addWidget(label_date_added)
                 like_buttons_layout.addWidget(btn_delete)
 
-            card_layout.addLayout(like_buttons_layout, 7, 1)
+            card_layout.addLayout(like_buttons_layout, 8, 1)
             card.setLayout(card_layout)
             user_list_widget.layout().addWidget(card)
 
@@ -599,6 +626,7 @@ class MainWindow(QtGui.QMainWindow):
                 QtGui.QMessageBox.critical(self, 'Error', str(data))
             else:
                 self.session = data
+                self.friend_list = list(self.session.get_fb_friends())
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
                 self.load_profile()  # Automatically load profile after session is ready.
                 self.load_matches()  # Automatically load matches after session is ready.
@@ -628,10 +656,14 @@ class MainWindow(QtGui.QMainWindow):
             self.txt_img_threshold.setDisabled(False)
             self.txt_face_threshold.setDisabled(False)
             self.txt_bio_threshold.setDisabled(False)
+            self.chk_exclude_friends.setDisabled(False)
+            self.chk_exclude_mutual.setDisabled(False)
         else:
             self.txt_img_threshold.setDisabled(True)
             self.txt_face_threshold.setDisabled(True)
             self.txt_bio_threshold.setDisabled(True)
+            self.chk_exclude_friends.setDisabled(True)
+            self.chk_exclude_mutual.setDisabled(True)
 
     def read_settings(self):
         """Reads saved user preferences and loads it into the application. Otherwise, load defaults."""
@@ -646,6 +678,8 @@ class MainWindow(QtGui.QMainWindow):
             self.txt_img_threshold.setText(config.get('Decision', 'img_threshold'))
             self.txt_face_threshold.setText(config.get('Decision', 'face_threshold'))
             self.txt_bio_threshold.setText(config.get('Decision', 'bio_threshold'))
+            self.chk_exclude_friends.setChecked(config.getboolean('Decision', 'exclude_friends'))
+            self.chk_exclude_mutual.setChecked(config.getboolean('Decision', 'exclude_mutual'))
 
             self.chk_autochat.setChecked(config.getboolean('Chat', 'enabled'))
             self.chk_respond_list.setChecked(config.getboolean('Chat', 'respond_list'))
@@ -678,6 +712,8 @@ class MainWindow(QtGui.QMainWindow):
         config.set('Decision', 'face_threshold', self.txt_face_threshold.text())
         # TODO: insert filepath of cascade, for user customizability
         config.set('Decision', 'bio_threshold', self.txt_bio_threshold.text())
+        config.set('Decision', 'exclude_friends', str(self.chk_exclude_friends.isChecked()))
+        config.set('Decision', 'exclude_mutual', str(self.chk_exclude_mutual.isChecked()))
 
         try:
             config.add_section('Chat')
@@ -693,3 +729,35 @@ class MainWindow(QtGui.QMainWindow):
             config.write(f)
         QtGui.QMessageBox.information(self, 'Information', 'Settings saved.')
         self.connect_tinder()
+
+    def start_botting(self, button):
+        if self.session:
+            decision_handler = None
+            if not self.txt_img_threshold.text():
+                self.txt_img_threshold.setText(str(Constants.THRESHOLD_IMG_DEFAULT))
+            if not self.txt_face_threshold.text():
+                self.txt_face_threshold.setText(str(Constants.THRESHOLD_FACE_DEFAULT))
+            if not self.txt_bio_threshold.text():
+                self.txt_bio_threshold.setText(str(Constants.THRESHOLD_BIO_DEFAULT))
+
+            if self.chk_decision.isChecked():
+                decision_handler = DecisionHandler(
+                    int(self.txt_img_threshold.text()),
+                    int(self.txt_face_threshold.text()),
+                    int(self.txt_bio_threshold.text()),
+                    self.chk_exclude_friends.isChecked(),
+                    self.chk_exclude_mutual.isChecked()
+                )
+            self.likes_bot = LikesBotThread(self.session, self.likes_handler, decision_handler)
+            self.likes_bot.start()
+            button.setText('Stop Pinning')
+            button.clicked.disconnect()
+            button.clicked.connect(lambda: self.stop_botting(button))
+        else:
+            QtGui.QMessageBox.critical(self, 'Unable to Start Pinning', 'You are not connected to Tinder yet.')
+
+    def stop_botting(self, button):
+        self.likes_bot.stop()
+        button.setText('Start Pinning')
+        button.clicked.disconnect()
+        button.clicked.connect(lambda: self.start_botting(button))

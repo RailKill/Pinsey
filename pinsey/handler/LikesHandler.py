@@ -18,22 +18,22 @@ class LikesHandler:
         self.dislikes_filepath = 'dislikes.csv'
         self.photo_storage_path = '../images/'
         self.fieldnames = ['id', 'name', 'gender', 'age', 'birth_date', 'bio', 'jobs', 'schools', 'distance_km',
-                           'common_connections', 'common_likes', 'date_added']
+                           'common_connections', 'common_likes', 'date_added', 'added_by']
 
         # Every time the CSV files are read, the Munchy user object is stored in this history dictionary.
         self.history = {self.likes_filepath: [], self.dislikes_filepath: []}
 
-    def like_user(self, user):
+    def like_user(self, user, owner='User'):
         # user.like()
-        self._write(self.likes_filepath, user)
+        self._write(self.likes_filepath, user, owner)
 
-    def dislike_user(self, user):
+    def dislike_user(self, user, owner='User'):
         # user.dislike()
-        self._write(self.dislikes_filepath, user)
+        self._write(self.dislikes_filepath, user, owner)
 
-    def superlike_user(self, user):
+    def superlike_user(self, user, owner='User'):
         # user.superlike()
-        self._write(self.likes_filepath, user)
+        self._write(self.likes_filepath, user, owner)
 
     def get_likes(self):
         return self._read(self.likes_filepath)
@@ -98,6 +98,8 @@ class LikesHandler:
                     user.jobs = ast.literal_eval(user.jobs)
                     user.photos = glob.glob(self.photo_storage_path + user.id + '/*.jpg')
                     user.schools = ast.literal_eval(user.schools)
+                    user.common_connections = ast.literal_eval(user.common_connections)
+                    user.common_likes = ast.literal_eval(user.common_likes)
 
                     try:
                         user.thumb_data = open(user.photos[0], 'rb').read()
@@ -111,7 +113,7 @@ class LikesHandler:
 
         return user_list
 
-    def _write(self, filepath, user):
+    def _write(self, filepath, user, owner):
         """
             Appends a new user into the like/dislike CSV history data and saves their photos locally.
 
@@ -140,10 +142,12 @@ class LikesHandler:
                 user_dict['age'] = user.age
                 user_dict['distance_km'] = user.distance_km
                 user_dict['gender'] = user.gender
+                user_dict['common_connections'] = user.common_connections
+                user_dict['common_likes'] = user.common_likes
                 user_dict['date_added'] = datetime.now()
+                user_dict['added_by'] = owner
                 writer.writerow(user_dict)
 
-        # Download the images for storing.
-        download_photos = DownloadPhotosThread(user.photos)
-        download_photos.data_downloaded.connect(save_photos)
-        download_photos.start()
+        # Not starting a concurrent thread, instead just using the thread's function to download photos will do.
+        download_photos = DownloadPhotosThread(user.photos).download()
+        save_photos(download_photos)

@@ -1,5 +1,5 @@
 from PyQt4 import QtGui, QtCore
-from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE
+from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE, CSS_FONT_NOTIFICATION
 
 
 class EmptyDict(dict):
@@ -7,7 +7,7 @@ class EmptyDict(dict):
 
 
 class UserInformationWidgetStack:
-    def __init__(self, user):
+    def __init__(self, user, friend_list=None):
         """
                 Generates a dictionary object containing widgets for user information. These widgets can be accessed by
                 the following attributes: name_set, dob, distance, schools, jobs, bio.
@@ -18,6 +18,8 @@ class UserInformationWidgetStack:
                 :Example:
                 addWidget(UserInformationWidgetStack(user).name_set)
         """
+        if not friend_list:
+            friend_list = []
 
         self.name_set = name_set(user.name, user.gender, user.age)  # User will definitely have a name attribute.
         "QLabel formatting of user's name, gender and age."
@@ -29,6 +31,17 @@ class UserInformationWidgetStack:
         self.distance = QtGui.QLabel('<b>Distance: </b>' + "{0:.2f}".format(user.distance_km) + 'km')
         "QLabel containing user's distance in km."
         self.distance.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
+        if user.common_connections:
+            connections = ", ".join(str(x) + ' (' + get_connection_name(x, friend_list) + ')'
+                                    for x in user.common_connections)
+        else:
+            connections = 'None.'
+        if is_fb_friend(user, friend_list):
+            connections += '<span style="' + CSS_FONT_NOTIFICATION + '"> (Friend) </span>'
+        self.connections = QtGui.QLabel('<b>Common Connections: </b>' + connections)
+        "QLabel containing user's list of common connections."
+        self.connections.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
         if user.schools:
             schools = ", ".join(str(x) for x in user.schools)
@@ -88,6 +101,40 @@ def horizontal_line():
     line.setFrameShadow(QtGui.QFrame.Sunken)
     line.setFrameShape(QtGui.QFrame.HLine)
     return line
+
+
+def is_fb_friend(user, friend_list):
+    """
+        Checks if a given user exists in the given friend list.
+
+        :param user:            User.
+        :type user:             pynder.models.user.User
+        :param friend_list:     Friend list.
+        :type friend_list:      list of pynder.models.friend.Friend
+        :return:                True if user is a friend, false otherwise.
+        :rtype:                 bool
+    """
+    for friend in friend_list:
+        if friend.user_id == user.id:
+            return True
+    return False
+
+
+def get_connection_name(connection_id, friend_list):
+    """
+        Given a mutual friends' ID, check the given list of Facebook friends and extract the name.
+
+        :param connection_id:       Connection's (mutual friend) Facebook ID.
+        :type connection_id:        str
+        :param friend_list:         List of Facebook friends.
+        :type friend_list:          list of pynder.models.friend.Friend
+        :return:                    Friend's name.
+        :rtype:                     str
+    """
+    for friend in friend_list:
+        if connection_id == friend.facebook_id:
+            return friend.name
+    return ''
 
 
 def name_set(name, gender, age=0, banned=False):

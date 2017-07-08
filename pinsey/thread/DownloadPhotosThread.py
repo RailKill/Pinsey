@@ -23,7 +23,7 @@ class DownloadPhotosThread(QtCore.QThread):
         QtCore.QThread.__init__(self)
         self.url_list = url_list
 
-    def run(self):
+    def download(self):
         photo_list = []
         for url in self.url_list:
             photo = EmptyDict()
@@ -34,6 +34,8 @@ class DownloadPhotosThread(QtCore.QThread):
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
                 print('Download photos error: ' + str(ex))
+        return photo_list
 
+    def run(self):
         # Return the list of photo data.
-        self.data_downloaded.emit(photo_list)
+        self.data_downloaded.emit(self.download())

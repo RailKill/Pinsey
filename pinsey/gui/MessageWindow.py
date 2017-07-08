@@ -5,10 +5,11 @@ from pinsey.Utils import center, picture_grid, UserInformationWidgetStack
 
 
 class MessageWindow(QtGui.QMainWindow):
-    def __init__(self, match, main_window):
+    def __init__(self, match, main_window, friend_list):
         super(MessageWindow, self).__init__()
         self.main_window = main_window
         self.match = match
+        self.friend_list = friend_list
         self.setWindowTitle('Messaging: ' + self.match.user.name)
         self.setWindowIcon(QtGui.QIcon(ICON_FILEPATH))
 
@@ -16,13 +17,14 @@ class MessageWindow(QtGui.QMainWindow):
         info_widget = QtGui.QWidget()
         number_of_photos = NUMBER_OF_PHOTOS
         info_layout = picture_grid(self.match.user.photos, THUMBNAIL_SIZE, number_of_photos)
-        info_stack = UserInformationWidgetStack(self.match.user)
+        info_stack = UserInformationWidgetStack(self.match.user, self.friend_list)
         info_layout.addWidget(info_stack.name_set, number_of_photos, 0, 1, number_of_photos)
         info_layout.addWidget(info_stack.dob, number_of_photos + 1, 0, 1, number_of_photos)
         info_layout.addWidget(info_stack.distance, number_of_photos + 2, 0, 1, number_of_photos)
-        info_layout.addWidget(info_stack.schools, number_of_photos + 3, 0, 1, number_of_photos)
-        info_layout.addWidget(info_stack.jobs, number_of_photos + 4, 0, 1, number_of_photos)
-        info_layout.addWidget(info_stack.bio, number_of_photos + 5, 0, 1, number_of_photos)
+        info_layout.addWidget(info_stack.connections, number_of_photos + 3, 0, 1, number_of_photos)
+        info_layout.addWidget(info_stack.schools, number_of_photos + 4, 0, 1, number_of_photos)
+        info_layout.addWidget(info_stack.jobs, number_of_photos + 5, 0, 1, number_of_photos)
+        info_layout.addWidget(info_stack.bio, number_of_photos + 6, 0, 1, number_of_photos)
 
         self.messages_area = QtGui.QTextEdit()
         self.messages_area.setFont(FONT_EMOJI)
