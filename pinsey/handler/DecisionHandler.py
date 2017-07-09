@@ -1,3 +1,4 @@
+import logging
 import os
 from pinsey.Constants import USER_DATA_DIR
 from pinsey.Utils import is_fb_friend
@@ -26,8 +27,9 @@ class DecisionHandler:
         self.bio_threshold = bio_threshold
         self.exclude_friends = exclude_friends
         self.exclude_mutual = exclude_mutual
-        self.bio_blacklist = self.initialize_blacklist()
         self.blacklist_path = USER_DATA_DIR + 'bio-blacklist.txt'
+        self.bio_blacklist = self.initialize_blacklist()
+        self.logger = logging.getLogger(__name__)
 
     def analyze(self, user, friend_list):
         """
@@ -39,23 +41,25 @@ class DecisionHandler:
             :rtype:         bool
         """
         if self.exclude_friends and is_fb_friend(user, friend_list):
-            print('Disliking ' + user.name + ' because this user is a Facebook friend.')
+            self.logger.info('Disliking ' + user.name + ' because this user is a Facebook friend.')
             return False
 
         if self.exclude_mutual and user.common_connections:
-            print('Disliking ' + user.name + ' because this user is a mutual friend.')
+            self.logger.info('Disliking ' + user.name + ' because this user is a mutual friend.')
             return False
 
         if user.bio:
             # Biography threshold check.
             if self.bio_threshold > 0:
                 if len(user.bio) < self.bio_threshold:
-                    print('Disliking ' + user.name + ' due to not having a long enough biography.')
+                    self.logger.info('Disliking ' + user.name + ' due to not having a long enough biography.')
                     return False
 
             # Biography blacklist word check.
             if any(blacklisted_substring.lower() in user.bio.lower() for blacklisted_substring in self.bio_blacklist):
-                print('Disliking ' + user.name + ' for having a biography that contains a blacklisted keyword.')
+                self.logger.info(
+                    'Disliking ' + user.name + ' for having a biography that contains a blacklisted keyword.'
+                )
                 return False
 
         # Check each image for this user if it is within the specified minimum and maximum face threshold.
@@ -68,7 +72,7 @@ class DecisionHandler:
         if number_of_good_images >= self.img_threshold:
             return True
         else:
-            print('Disliking ' + user.name + ' due to not having good enough images.')
+            self.logger.info('Disliking ' + user.name + ' due to not having good enough images.')
             return False
 
     def initialize_blacklist(self):

@@ -124,7 +124,7 @@ class LikesHandler:
         """
         def save_photos(data):
             for index, photo in enumerate(data):
-                photo_path = self.photo_storage_path + user.id + '/' + str(index) + '.jpg'
+                photo_path = os.path.join(self.photo_storage_path + user.id, str(index) + '.jpg')
                 dirname = os.path.dirname(photo_path)
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)

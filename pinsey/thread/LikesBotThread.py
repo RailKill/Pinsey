@@ -1,3 +1,4 @@
+import logging
 from random import randint
 from PyQt4 import QtCore
 
@@ -26,6 +27,7 @@ class LikesBotThread(QtCore.QThread):
         self.likes_handler = likes_handler
         self.decision_handler = decision_handler
         self.abort = False
+        self.logger = logging.getLogger(__name__)
 
     def stop(self):
         self.abort = True
@@ -41,12 +43,12 @@ class LikesBotThread(QtCore.QThread):
                             self.likes_handler.dislike_user(user, 'Bot')
                             continue
                     self.likes_handler.like_user(user, 'Bot')
-                    print('Liking ' + user.name + '.')
+                    self.logger.info('Liking ' + user.name + '.')
                 except StopIteration:
                     # No more users to go through. Reset the distance filter to fetch the users again.
                     self.session.profile.distance_filter = self.session.profile.distance_filter
                     break
                 self.sleep(randint(3, 5))  # Give it a break, 3 to 5 seconds between every swipe.
             else:
-                print('Out of likes. Can like in: ' + str(self.session.can_like_in) + ' seconds.')
+                self.logger.info('Out of likes. Can like in: ' + str(self.session.can_like_in) + ' seconds.')
                 self.sleep(3600)  # Out of likes, pausing for 1 hour.

@@ -1,4 +1,5 @@
 import cv2
+import logging
 import numpy as np
 import urllib.request
 
@@ -14,19 +15,20 @@ class FaceDetectionHandler:
         self.face_cascade = cv2.CascadeClassifier(casc_path)
         self.url_list = url_list
         self.show_window = show_window
+        self.logger = logging.getLogger(__name__)
 
     def run(self):
         faces_detected_list = []
         for url in self.url_list:
             try:
                 img = self.fetch_image(url)
-                faces_detected_list.append(self.detect_faces(img))
+                faces_detected_list.append(self.detect_faces(img, url))
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
-                print('Download photos error: ' + str(ex))
+                self.logger.warning('Unable to download photos from ' + url + ' (' + str(ex)) + ')'
         return faces_detected_list
 
-    def detect_faces(self, image):
+    def detect_faces(self, image, url):
         """
         Returns number of faces detected (integer) based on a given image.
         This uses the Haar cascade in OpenCV to detect frontal faces.
@@ -43,14 +45,14 @@ class FaceDetectionHandler:
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 
-        print("Found {0} faces!".format(len(faces)))
+        self.logger.info("Found {0} faces in {1}".format(len(faces), url))
 
         if self.show_window:
             # Draw a rectangle around the faces.
             for (x, y, w, h) in faces:
                 cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            cv2.imshow("Faces found", image)
+            cv2.imshow("Faces found for " + url, image)
             # cv2.moveWindow("Faces found", 0, 0)
             cv2.waitKey(0)
 
