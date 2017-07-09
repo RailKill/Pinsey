@@ -6,6 +6,7 @@ import os
 import shutil
 from datetime import datetime
 from munch import munchify
+from pinsey.Constants import USER_DATA_DIR
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
@@ -14,9 +15,9 @@ class LikesHandler:
         Handles likes/dislikes and writes the history to a .csv file.
     """
     def __init__(self):
-        self.likes_filepath = 'likes.csv'
-        self.dislikes_filepath = 'dislikes.csv'
-        self.photo_storage_path = '../images/'
+        self.likes_filepath = USER_DATA_DIR + 'likes.csv'
+        self.dislikes_filepath = USER_DATA_DIR + 'dislikes.csv'
+        self.photo_storage_path = os.path.join(USER_DATA_DIR + 'images', '')
         self.fieldnames = ['id', 'name', 'gender', 'age', 'birth_date', 'bio', 'jobs', 'schools', 'distance_km',
                            'common_connections', 'common_likes', 'date_added', 'added_by']
 

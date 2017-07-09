@@ -1,4 +1,5 @@
 import os
+from pinsey.Constants import USER_DATA_DIR
 from pinsey.Utils import is_fb_friend
 from pinsey.handler.FaceDetectionHandler import FaceDetectionHandler
 
@@ -26,6 +27,7 @@ class DecisionHandler:
         self.exclude_friends = exclude_friends
         self.exclude_mutual = exclude_mutual
         self.bio_blacklist = self.initialize_blacklist()
+        self.blacklist_path = USER_DATA_DIR + 'bio-blacklist.txt'
 
     def analyze(self, user, friend_list):
         """
@@ -69,18 +71,16 @@ class DecisionHandler:
             print('Disliking ' + user.name + ' due to not having good enough images.')
             return False
 
-    @staticmethod
-    def initialize_blacklist():
-        blacklist_path = 'bio-blacklist.txt'  # TODO: Replace path to user data directory instead.
-        if os.path.exists(blacklist_path):
-            with open(blacklist_path, 'r') as blacklist:
+    def initialize_blacklist(self):
+        if os.path.exists(self.blacklist_path):
+            with open(self.blacklist_path, 'r') as blacklist:
                 bio_blacklist = [line.strip() for line in blacklist]
 
             return bio_blacklist
         else:
             default_blacklist = ['shemale', 'she-male', 'trans', 'm a guy', 'm a dude', 'm male', 'm a boy',
                                  'i have a dick', 'my dick']
-            with open(blacklist_path, 'w') as blacklist:
+            with open(self.blacklist_path, 'w') as blacklist:
                 for item in default_blacklist:
                     blacklist.write("%s\n" % item)
 

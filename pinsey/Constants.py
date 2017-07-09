@@ -1,5 +1,23 @@
+import appdirs
 import re
+import os
 from PyQt4.QtGui import QFont
+
+
+# Name of this application.
+APP_NAME = 'Pinsey'
+
+# Name of the author.
+AUTHOR_NAME = 'RailKill'
+
+# Directory to store configuration data.
+CONFIG_DATA_DIR = os.path.join(appdirs.user_config_dir(APP_NAME, AUTHOR_NAME), '')
+
+# Directory to store user data.
+USER_DATA_DIR = os.path.join(appdirs.user_data_dir(APP_NAME, AUTHOR_NAME), '')
+
+# Directory to store log files.
+LOGS_DATA_DIR = os.path.join(appdirs.user_log_dir(APP_NAME, AUTHOR_NAME), '')
 
 # Regular expression pattern for emoji unicode characters.
 EMOJI_PATTERN = re.compile('['

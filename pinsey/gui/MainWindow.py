@@ -678,7 +678,7 @@ class MainWindow(QtGui.QMainWindow):
     def read_settings(self):
         """Reads saved user preferences and loads it into the application. Otherwise, load defaults."""
         config = ConfigParser()
-        if config.read('config.ini'):
+        if config.read(Constants.CONFIG_DATA_DIR + 'config.ini'):
             self.txt_location.setText(config.get('Authentication', 'location'))
             self.txt_auth.setText(config.get('Authentication', 'auth'))
             self.txt_id.setText(config.get('Authentication', 'id'))
@@ -714,7 +714,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def save_settings(self):
         config = ConfigParser()
-        config.read('config.ini')
+        config.read(Constants.CONFIG_DATA_DIR + 'config.ini')
         try:
             config.add_section('Authentication')
         except DuplicateSectionError:
