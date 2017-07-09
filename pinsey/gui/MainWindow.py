@@ -55,9 +55,10 @@ class MainWindow(QtGui.QMainWindow):
         self.friend_list = []
         self.download_thread = []
         self.matches_thread = None
+        self.session_thread = None
         self.likes_bot = None
         self.likes_handler = LikesHandler()
-        self.setWindowTitle('Pinsey')
+        self.setWindowTitle(Constants.APP_NAME)
         self.setWindowIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.setMinimumWidth(500)
         self.resize(800, 480)
@@ -627,19 +628,21 @@ class MainWindow(QtGui.QMainWindow):
         self.showNormal()
 
     def connect_tinder(self):
-        status_text = 'Tinder Status: '
-
         def session_connected(data):
-            if isinstance(data, Exception):
-                self.session = None
-                self.label_status.setText(status_text + '<span style="color:red;font-weight:bold">Offline</span>')
-                QtGui.QMessageBox.critical(self, 'Error', str(data))
-            else:
-                self.session = data
+            if data.session:
+                if data.exception:
+                    QtGui.QMessageBox.warning(self, 'Warning', str(data.exception))
+                self.session = data.session
                 self.friend_list = list(self.session.get_fb_friends())
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
                 self.load_profile()  # Automatically load profile after session is ready.
                 self.load_matches()  # Automatically load matches after session is ready.
+            else:
+                self.session = None
+                self.label_status.setText(status_text + '<span style="color:red;font-weight:bold">Offline</span>')
+                QtGui.QMessageBox.critical(self, 'Error', str(data.exception))
+
+        status_text = 'Tinder Status: '
 
         if self.txt_location.text() and self.txt_id.text() and self.txt_auth.text():
             self.session_thread = SessionThread(self.txt_id.text(), self.txt_auth.text(), self.txt_location.text())
@@ -714,7 +717,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def save_settings(self):
         config = ConfigParser()
-        config.read(Constants.CONFIG_DATA_DIR + 'config.ini')
+        config_path = Constants.CONFIG_DATA_DIR + 'config.ini'
+        config.read(config_path)
         try:
             config.add_section('Authentication')
         except DuplicateSectionError:
@@ -745,7 +749,7 @@ class MainWindow(QtGui.QMainWindow):
         config.set('Chat', 'respond_bot', str(self.chk_respond_bot.isChecked()))
         config.set('Chat', 'pickup_threshold', self.txt_pickup_threshold.text())
 
-        with open('config.ini', 'w') as f:
+        with open(config_path, 'w') as f:
             config.write(f)
         QtGui.QMessageBox.information(self, 'Information', 'Settings saved.')
         self.connect_tinder()

@@ -1,6 +1,8 @@
 import pynder
-from geopy.geocoders import Nominatim
 from PyQt4 import QtCore
+from geopy.exc import GeocoderTimedOut
+from geopy.geocoders import GoogleV3
+from pinsey.Utils import EmptyDict
 
 
 class SessionThread(QtCore.QThread):
@@ -26,17 +28,24 @@ class SessionThread(QtCore.QThread):
         self.location = location
 
     def run(self):
+        session_set = EmptyDict()
+        session_set.session = None
+        session_set.exception = None
         try:
-            session = pynder.Session(facebook_id=self.id, facebook_token=self.auth)
-            geolocator = Nominatim()
+            session_set.session = pynder.Session(facebook_id=self.id, facebook_token=self.auth)
+            geolocator = GoogleV3()
             location = geolocator.geocode(self.location)
-            session.update_location(location.latitude, location.longitude)
+            session_set.session.update_location(location.latitude, location.longitude)
         except pynder.errors.RequestError:
-            session = pynder.errors.RequestError('Facebook authentication failed! \n\n'
-                                                 'Please ensure that the authentication details are entered and saved '
-                                                 'correctly in the Settings tab.')
+            session_set.exception = pynder.errors.RequestError('Facebook authentication failed! \n\n'
+                                                               'Please ensure that the authentication details are '
+                                                               'entered and saved correctly in the Settings tab.')
+        except GeocoderTimedOut:
+            # Happens when geo-location service is unavailable at the moment.
+            session_set.exception = GeocoderTimedOut('Unable to update your location at this moment. '
+                                                     'Using last saved location from Tinder servers instead.')
         except Exception as e:
-            session = e
+            session_set.exception = e
 
-        self.data_downloaded.emit(session)
+        self.data_downloaded.emit(session_set)
 
