@@ -5,6 +5,7 @@ from pinsey import Constants
 from pinsey.Utils import clickable, center, picture_grid, horizontal_line, name_set, UserInformationWidgetStack
 from pinsey.gui.ImageWindow import ImageWindow
 from pinsey.gui.MessageWindow import MessageWindow
+from pinsey.gui.component.UserFilterStack import UserFilterStack
 from pinsey.handler.DecisionHandler import DecisionHandler
 from pinsey.handler.LikesHandler import LikesHandler
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
@@ -82,9 +83,10 @@ class MainWindow(QtGui.QMainWindow):
         # Add tabs
         tabs.addTab(self.setup_settings(), 'Settings')
         tabs.addTab(self.setup_profile(), 'Profile')
-        tabs.addTab(self.setup_userlisting('Reload', self.reload_likes), 'Liked')
-        tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes), 'Disliked')
-        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users), 'Browse')
+        filter_list = ['Date Added', 'Name', 'Age', 'Distance KM']
+        tabs.addTab(self.setup_userlisting('Reload', self.reload_likes, UserFilterStack(filter_list)), 'Liked')
+        tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes, UserFilterStack(filter_list)), 'Disliked')
+        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users, UserFilterStack(filter_list[1:])), 'Browse')
         tabs.addTab(self.setup_matches(), 'Matches')
 
         # Set main window layout
@@ -166,15 +168,18 @@ class MainWindow(QtGui.QMainWindow):
         tab_profile.layout().addWidget(self.profile_area)
         return tab_profile
 
-    def setup_userlisting(self, refresh_text, refresh_function):
+    def setup_userlisting(self, refresh_text, refresh_function, filter_stack=None):
         tab_userlist = QtGui.QWidget()
         scroll = QtGui.QScrollArea()
         btn_refresh = QtGui.QPushButton(refresh_text, self)
-        btn_refresh.clicked.connect(lambda: (refresh_function(scroll, btn_refresh)))
+        btn_refresh.clicked.connect(lambda: (refresh_function(scroll, btn_refresh, filter_stack)))
+
         tab_userlist.setLayout(QtGui.QVBoxLayout())
+        if filter_stack:
+            tab_userlist.layout().addWidget(filter_stack)
         tab_userlist.layout().addWidget(btn_refresh)
         tab_userlist.layout().addWidget(scroll)
-        refresh_function(scroll, btn_refresh)
+        refresh_function(scroll, btn_refresh, filter_stack)
         return tab_userlist
 
     def setup_matches(self):
@@ -450,11 +455,16 @@ class MainWindow(QtGui.QMainWindow):
         self.matches_thread.data_downloaded.connect(populate_matches)
         self.matches_thread.start()
 
-    def refresh_users(self, list_area, refresh_button):
+    def refresh_users(self, list_area, refresh_button, filter_stack=None):
         def nearby_users_fetched(data):
             refresh_button.setText('Refresh')
             refresh_button.setDisabled(False)
             if data:
+                if filter_stack:
+                    data.sort(
+                        key=lambda x: getattr(x, filter_stack.sort_attribute()), reverse=filter_stack.is_descending()
+                    )
+                    data = [x for x in data if x.gender.lower() in filter_stack.gender_filter()]
                 list_area.setWidget(self.populate_users(data, False))
             else:
                 # No more users to go through. Reset the distance filter so the session will fetch the users again.
@@ -686,11 +696,21 @@ class MainWindow(QtGui.QMainWindow):
             self.chk_respond_bot.setChecked(config.getboolean('Chat', 'respond_bot'))
             self.txt_pickup_threshold.setText(config.get('Chat', 'pickup_threshold'))
 
-    def reload_likes(self, list_area, *_):
-        list_area.setWidget(self.populate_users(self.likes_handler.get_likes(), True))
+    def reload_likes(self, list_area, _, filter_stack):
+        like_list = self.likes_handler.get_likes()
+        if filter_stack:
+            like_list.sort(key=lambda x: getattr(x, filter_stack.sort_attribute()),
+                           reverse=filter_stack.is_descending())
+            like_list = [x for x in like_list if x.gender.lower() in filter_stack.gender_filter()]
+        list_area.setWidget(self.populate_users(like_list, True))
 
-    def reload_dislikes(self, list_area, *_):
-        list_area.setWidget(self.populate_users(self.likes_handler.get_dislikes(), True))
+    def reload_dislikes(self, list_area, _, filter_stack):
+        dislike_list = self.likes_handler.get_dislikes()
+        if filter_stack:
+            dislike_list.sort(key=lambda x: getattr(x, filter_stack.sort_attribute()),
+                              reverse=filter_stack.is_descending())
+            dislike_list = [x for x in dislike_list if x.gender.lower() in filter_stack.gender_filter()]
+        list_area.setWidget(self.populate_users(dislike_list, True))
 
     def save_settings(self):
         config = ConfigParser()
