@@ -41,24 +41,24 @@ class DecisionHandler:
             :rtype:         bool
         """
         if self.exclude_friends and is_fb_friend(user, friend_list):
-            self.logger.info('Disliking ' + user.name + ' because this user is a Facebook friend.')
+            self.logger.info(u'Disliking ' + user.name + ' because this user is a Facebook friend.')
             return False
 
         if self.exclude_mutual and user.common_connections:
-            self.logger.info('Disliking ' + user.name + ' because this user is a mutual friend.')
+            self.logger.info(u'Disliking ' + user.name + ' because this user is a mutual friend.')
             return False
 
         if user.bio:
             # Biography threshold check.
             if self.bio_threshold > 0:
                 if len(user.bio) < self.bio_threshold:
-                    self.logger.info('Disliking ' + user.name + ' due to not having a long enough biography.')
+                    self.logger.info(u'Disliking ' + user.name + ' due to not having a long enough biography.')
                     return False
 
             # Biography blacklist word check.
             if any(blacklisted_substring.lower() in user.bio.lower() for blacklisted_substring in self.bio_blacklist):
                 self.logger.info(
-                    'Disliking ' + user.name + ' for having a biography that contains a blacklisted keyword.'
+                    u'Disliking ' + user.name + ' for having a biography that contains a blacklisted keyword.'
                 )
                 return False
 
@@ -72,7 +72,7 @@ class DecisionHandler:
         if number_of_good_images >= self.img_threshold:
             return True
         else:
-            self.logger.info('Disliking ' + user.name + ' due to not having good enough images.')
+            self.logger.info(u'Disliking ' + user.name + ' due to not having good enough images.')
             return False
 
     def initialize_blacklist(self):
@@ -83,7 +83,7 @@ class DecisionHandler:
             return bio_blacklist
         else:
             default_blacklist = ['shemale', 'she-male', 'trans', 'm a guy', 'm a dude', 'm male', 'm a boy',
-                                 'i have a dick', 'my dick']
+                                 'i have a dick', 'my dick', 'ladyboy', 'lady-boy']
             with open(self.blacklist_path, 'w') as blacklist:
                 for item in default_blacklist:
                     blacklist.write("%s\n" % item)

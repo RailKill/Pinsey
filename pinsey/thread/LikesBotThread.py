@@ -43,7 +43,7 @@ class LikesBotThread(QtCore.QThread):
                             self.likes_handler.dislike_user(user, 'Bot')
                             continue
                     self.likes_handler.like_user(user, 'Bot')
-                    self.logger.info('Liking ' + user.name + '.')
+                    self.logger.info(u'Liking ' + user.name + '.')
                 except StopIteration:
                     # No more users to go through. Reset the distance filter to fetch the users again.
                     self.session.profile.distance_filter = self.session.profile.distance_filter

@@ -25,15 +25,15 @@ class LikesHandler:
         self.history = {self.likes_filepath: [], self.dislikes_filepath: []}
 
     def like_user(self, user, owner='User'):
-        # user.like()
+        user.like()
         self._write(self.likes_filepath, user, owner)
 
     def dislike_user(self, user, owner='User'):
-        # user.dislike()
+        user.dislike()
         self._write(self.dislikes_filepath, user, owner)
 
     def superlike_user(self, user, owner='User'):
-        # user.superlike()
+        user.superlike()
         self._write(self.likes_filepath, user, owner)
 
     def get_likes(self):

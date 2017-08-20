@@ -25,7 +25,7 @@ class FaceDetectionHandler:
                 faces_detected_list.append(self.detect_faces(img, url))
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
-                self.logger.warning('Unable to download photos from ' + url + ' (' + str(ex)) + ')'
+                self.logger.warning('Unable to download photos from ' + url + ' (' + str(ex) + ')')
         return faces_detected_list
 
     def detect_faces(self, image, url):

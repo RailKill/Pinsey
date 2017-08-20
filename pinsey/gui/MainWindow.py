@@ -46,7 +46,7 @@ class MainWindow(QtGui.QMainWindow):
         self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.tray_icon.activated.connect(self.tray_event)
         self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.hide()
+        self.tray_icon.show()
 
         # Initialize application variables.
         self.app = app
@@ -193,13 +193,14 @@ class MainWindow(QtGui.QMainWindow):
         def populate(data, thread):
             self.download_thread.remove(thread)
             profile_widget = QtGui.QWidget()
+            profil = self.session.profile
 
             # 1. Profile picture grid.
             number_of_photos = Constants.NUMBER_OF_PHOTOS
             pp_layout = picture_grid(data, Constants.THUMBNAIL_SIZE, number_of_photos)
 
             # 2. Name and gender of user.
-            label_name = name_set(profile.name, profile.gender, 0, profile.banned)
+            label_name = name_set(profil.name, profil.gender, 0, profil.banned)
             pp_layout.addWidget(label_name, number_of_photos, 0, 1, number_of_photos)
 
             # 3. Biography.
@@ -229,7 +230,16 @@ class MainWindow(QtGui.QMainWindow):
             bio_widget.layout().addWidget(label_chars)
             pp_layout.addWidget(bio_widget, number_of_photos + 1, 0, 1, number_of_photos)
 
-            txt_bio = QtGui.QPlainTextEdit(profile.bio)
+            # Profile may have no biography yet.
+            try:
+                bio_text = profil.bio
+            except KeyError:
+                bio_text = ''
+                profil = self.session.update_profile({
+                    "bio": bio_text
+                })
+
+            txt_bio = QtGui.QPlainTextEdit(bio_text)
             txt_bio.setFont(QtGui.QFont('Segoe UI Symbol', 16))
             txt_bio.textChanged.connect(bio_truncate)
             bio_truncate()
@@ -246,7 +256,7 @@ class MainWindow(QtGui.QMainWindow):
             # 4. Gender
             radio_gender_male = QtGui.QRadioButton('Male')
             radio_gender_female = QtGui.QRadioButton('Female')
-            if profile.gender == 'male':
+            if profil.gender == 'male':
                 radio_gender_male.setChecked(True)
             else:
                 radio_gender_female.setChecked(True)
@@ -261,7 +271,7 @@ class MainWindow(QtGui.QMainWindow):
             # 5. Discoverable?
             label_discoverable = QtGui.QLabel('Discoverable: ')
             chk_discoverable = QtGui.QCheckBox()
-            chk_discoverable.setChecked(profile.discoverable)
+            chk_discoverable.setChecked(profil.discoverable)
             form_layout.addRow(label_discoverable, chk_discoverable)
 
             # 6. Maximum distance filter.
@@ -270,7 +280,7 @@ class MainWindow(QtGui.QMainWindow):
             slider_distance = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider_distance.setRange(1, 100)
             slider_distance.setSingleStep(1)
-            slider_distance.setValue(profile.distance_filter)
+            slider_distance.setValue(profil.distance_filter)
             slider_distance.valueChanged.connect(
                 lambda: (label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')))
             label_distance_value = QtGui.QLabel(str(round(slider_distance.value() * 1.6)) + 'km')
@@ -293,16 +303,16 @@ class MainWindow(QtGui.QMainWindow):
             label_age.setStyleSheet(form_label_style)
             label_to = QtGui.QLabel(' to ')
             slider_age_max = QtGui.QSlider(QtCore.Qt.Horizontal)
-            slider_age_max.setRange(profile.age_filter_min, 55)
+            slider_age_max.setRange(profil.age_filter_min, 55)
             slider_age_max.setSingleStep(1)
-            slider_age_max.setValue(55 if profile.age_filter_max > 54 else profile.age_filter_max)
+            slider_age_max.setValue(55 if profil.age_filter_max > 54 else profil.age_filter_max)
             slider_age_max.valueChanged.connect(max_slider_handle)
             label_age_max = QtGui.QLabel('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
 
             slider_age_min = QtGui.QSlider(QtCore.Qt.Horizontal)
-            slider_age_min.setRange(18, 46 if profile.age_filter_max > 46 else profile.age_filter_max)
+            slider_age_min.setRange(18, 46 if profil.age_filter_max > 46 else profil.age_filter_max)
             slider_age_min.setSingleStep(1)
-            slider_age_min.setValue(profile.age_filter_min)
+            slider_age_min.setValue(profil.age_filter_min)
             slider_age_min.valueChanged.connect(min_slider_handle)
             label_age_min = QtGui.QLabel(str(slider_age_min.value()))
 
@@ -319,9 +329,9 @@ class MainWindow(QtGui.QMainWindow):
             label_interested = QtGui.QLabel('Interested in: ')
             label_interested.setStyleSheet(form_label_style)
             chk_interested_male = QtGui.QCheckBox('Male')
-            chk_interested_male.setChecked('male' in list(profile.interested_in))
+            chk_interested_male.setChecked('male' in list(profil.interested_in))
             chk_interested_female = QtGui.QCheckBox('Female')
-            chk_interested_female.setChecked('female' in list(profile.interested_in))
+            chk_interested_female.setChecked('female' in list(profil.interested_in))
             interested_widget = QtGui.QWidget()
             interested_widget.setLayout(QtGui.QHBoxLayout())
             interested_widget.layout().addWidget(chk_interested_male)
@@ -345,18 +355,18 @@ class MainWindow(QtGui.QMainWindow):
 
                 # Workaround due to pynder 0.0.13 not yet supporting "gender" and "interested in" changes.
                 gender_filter = 2
-                profile.interested = []
-                profile.sex = (0, 'male') if radio_gender_male.isChecked() else (1, 'female')
+                profil.interested = []
+                profil.sex = (0, 'male') if radio_gender_male.isChecked() else (1, 'female')
                 if chk_interested_male.isChecked():
                     gender_filter -= 2
-                    profile.interested.append(0)
+                    profil.interested.append(0)
                 if chk_interested_female.isChecked():
                     gender_filter -= 1
-                    profile.interested.append(1)
+                    profil.interested.append(1)
                 self.session.update_profile({
-                    "interested_in": profile.interested,
+                    "interested_in": profil.interested,
                     "gender_filter": gender_filter,
-                    "gender": profile.sex[0]
+                    "gender": profil.sex[0]
                     # "squads_discoverable": False
                 })
 
@@ -365,19 +375,19 @@ class MainWindow(QtGui.QMainWindow):
 
             def reload_profile():
                 # Refresh GUI.
-                label_name.setText(name_set(profile.name, profile.sex[1], 0, profile.banned).text())
-                txt_bio.setPlainText(profile.bio)
-                chk_discoverable.setChecked(profile.discoverable)
-                slider_distance.setValue(profile.distance_filter)
+                label_name.setText(name_set(profil.name, profil.sex[1], 0, profil.banned).text())
+                txt_bio.setPlainText(profil.bio)
+                chk_discoverable.setChecked(profil.discoverable)
+                slider_distance.setValue(profil.distance_filter)
                 label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')
-                slider_age_max.setRange(profile.age_filter_min, 55)
-                slider_age_max.setValue(55 if profile.age_filter_max > 54 else profile.age_filter_max)
+                slider_age_max.setRange(profil.age_filter_min, 55)
+                slider_age_max.setValue(55 if profil.age_filter_max > 54 else profil.age_filter_max)
                 label_age_max.setText('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
-                slider_age_min.setRange(18, 46 if profile.age_filter_max > 46 else profile.age_filter_max)
-                slider_age_min.setValue(profile.age_filter_min)
+                slider_age_min.setRange(18, 46 if profil.age_filter_max > 46 else profil.age_filter_max)
+                slider_age_min.setValue(profil.age_filter_min)
                 label_age_min.setText(str(slider_age_min.value()))
-                chk_interested_male.setChecked(0 in list(profile.interested))  # interested_in workaround.
-                chk_interested_female.setChecked(1 in list(profile.interested))  # interested_in workaround.
+                chk_interested_male.setChecked(0 in list(profil.interested))  # interested_in workaround.
+                chk_interested_female.setChecked(1 in list(profil.interested))  # interested_in workaround.
 
             btn_save_profile = QtGui.QPushButton('Update Profile')
             btn_save_profile.setFixedHeight(50)
@@ -404,6 +414,16 @@ class MainWindow(QtGui.QMainWindow):
 
         def populate_matches(matches):
             updates = self.session.updates()
+            updates_balloon_message = ''
+            for update in updates:
+                if update in matches:
+                    updates_balloon_message += update.user.name
+                    if not update.messages:
+                        updates_balloon_message += ' (NEW) '
+                    updates_balloon_message += '\n'
+            if updates_balloon_message:
+                self.tray_icon.showMessage('New Update!', updates_balloon_message)
+
             matches_list = QtGui.QWidget()
             matches_list.setLayout(QtGui.QVBoxLayout())
             for match in matches:
@@ -607,25 +627,25 @@ class MainWindow(QtGui.QMainWindow):
 
     def changeEvent(self, event):
         if event.type() == QtCore.QEvent.WindowStateChange:
+            # TODO: Check if windowState = 3, happens when minimize on fullscreen window.
             if self.windowState() == QtCore.Qt.WindowMinimized:
                 for window in self.windows:
                     window.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
                     window.hide()  # Hides all windows associated with this window.
                 self.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
                 self.hide()
-                self.tray_icon.show()
 
     def tray_event(self, reason):
         if reason == QtGui.QSystemTrayIcon.DoubleClick:
             self.restore_window()
 
     def restore_window(self):
-        self.tray_icon.hide()
-        for window in self.windows:
-            window.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
-            window.showNormal()
-        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
-        self.showNormal()
+        if self.isHidden():
+            for window in self.windows:
+                window.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
+                window.showNormal()
+            self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
+            self.showNormal()
 
     def connect_tinder(self):
         def session_connected(data):
@@ -774,6 +794,10 @@ class MainWindow(QtGui.QMainWindow):
                 )
             self.likes_bot = LikesBotThread(self.session, self.likes_handler, decision_handler)
             self.likes_bot.start()
+
+            if self.chk_autochat.isChecked():
+                self.matches_thread.start_bot()
+
             button.setText('Stop Pinning')
             button.clicked.disconnect()
             button.clicked.connect(lambda: self.stop_botting(button))
@@ -782,6 +806,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def stop_botting(self, button):
         self.likes_bot.stop()
+        self.matches_thread.stop_bot()
         button.setText('Start Pinning')
         button.clicked.disconnect()
         button.clicked.connect(lambda: self.start_botting(button))
