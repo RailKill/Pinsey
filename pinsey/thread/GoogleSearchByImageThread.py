@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 from ghost import Ghost
 from ghost import TimeoutError
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 from pinsey.Utils import EmptyDict
 

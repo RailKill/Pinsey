@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE, CSS_FONT_NOTIFICATION
 
 
@@ -24,11 +24,11 @@ class UserInformationWidgetStack:
         self.name_set = name_set(user.name, user.gender, user.age)  # User will definitely have a name attribute.
         "QLabel formatting of user's name, gender and age."
 
-        self.dob = QtGui.QLabel('<b>Birthday: </b>' + user.birth_date.strftime("%B %d, %Y"))
+        self.dob = QtWidgets.QLabel('<b>Birthday: </b>' + user.birth_date.strftime("%B %d, %Y"))
         "QLabel containing user's date of birth."
         self.dob.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-        self.distance = QtGui.QLabel('<b>Distance: </b>' + "{0:.2f}".format(user.distance_km) + 'km')
+        self.distance = QtWidgets.QLabel('<b>Distance: </b>' + "{0:.2f}".format(user.distance_km) + 'km')
         "QLabel containing user's distance in km."
         self.distance.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
@@ -39,7 +39,7 @@ class UserInformationWidgetStack:
             connections = 'None.'
         if is_fb_friend(user, friend_list):
             connections += '<span style="' + CSS_FONT_NOTIFICATION + '"> (Friend) </span>'
-        self.connections = QtGui.QLabel('<b>Common Connections: </b>' + connections)
+        self.connections = QtWidgets.QLabel('<b>Common Connections: </b>' + connections)
         "QLabel containing user's list of common connections."
         self.connections.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
@@ -47,7 +47,7 @@ class UserInformationWidgetStack:
             schools = ", ".join(str(x) for x in user.schools)
         else:
             schools = 'None.'
-        self.schools = QtGui.QLabel('<b>Schools: </b>' + schools)
+        self.schools = QtWidgets.QLabel('<b>Schools: </b>' + schools)
         "QLabel containing user's list of schools."
         self.schools.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
@@ -55,11 +55,11 @@ class UserInformationWidgetStack:
             jobs = ", ".join(str(x) for x in user.jobs)
         else:
             jobs = 'None.'
-        self.jobs = QtGui.QLabel('<b>Occupation: </b>' + jobs)
+        self.jobs = QtWidgets.QLabel('<b>Occupation: </b>' + jobs)
         "QLabel containing user's list of jobs."
         self.jobs.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-        self.bio = QtGui.QLabel()
+        self.bio = QtWidgets.QLabel()
         "QLabel containing user's biography."
         # Users that don't have a biography will not have this 'bio' attribute. Check if it exists before proceeding.
         if user.bio:
@@ -91,15 +91,15 @@ def clickable(widget):
 
 
 def center(window):
-    screen = QtGui.QDesktopWidget().screenGeometry()
+    screen = QtWidgets.QDesktopWidget().screenGeometry()
     size = window.geometry()
     window.move((screen.width() / 2) - (size.width() / 2), (screen.height() / 2) - (size.height() / 2))
 
 
 def horizontal_line():
-    line = QtGui.QFrame()
-    line.setFrameShadow(QtGui.QFrame.Sunken)
-    line.setFrameShape(QtGui.QFrame.HLine)
+    line = QtWidgets.QFrame()
+    line.setFrameShadow(QtWidgets.QFrame.Sunken)
+    line.setFrameShape(QtWidgets.QFrame.HLine)
     return line
 
 
@@ -149,8 +149,8 @@ def name_set(name, gender, age=0, banned=False):
         :type age:      int
         :param banned:  [Optional] Is the user banned or not?
         :type banned:   bool
-        :return:        A QtGui.QLabel set that has the name, gender and age nicely formatted.
-        :rtype:         QtGui.QLabel
+        :return:        A QtWidgets.QLabel set that has the name, gender and age nicely formatted.
+        :rtype:         QtWidgets.QLabel
     """
     age_string = '(' + str(age) + ')' if age > 0 else ''
     banned_string = '<span style="color: Red;"> [BANNED] </span>' if banned else ''
@@ -160,7 +160,7 @@ def name_set(name, gender, age=0, banned=False):
     else:
         gender_string = '<span style="color: DodgerBlue;"> ♂ </span>'
     name_string = name + gender_string + age_string + banned_string
-    label_name = QtGui.QLabel(name_string)
+    label_name = QtWidgets.QLabel(name_string)
     label_name.setFont(FONT_HEADLINE)
     label_name.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
     return label_name
@@ -179,10 +179,10 @@ def picture_grid(image_dict, image_size, number_of_photos):
         :type image_size:           int
         :param number_of_photos:    Number of photos to fit into the grid.
         :type number_of_photos:     int
-        :return:                    Generated QtGui.QGridLayout picture grid layout.
-        :rtype:                     QtGui.QGridLayout
+        :return:                    Generated QtWidgets.QGridLayout picture grid layout.
+        :rtype:                     QtWidgets.QGridLayout
     """
-    pp_layout = QtGui.QGridLayout()
+    pp_layout = QtWidgets.QGridLayout()
     pp_layout.setSpacing(1)
 
     photos_half_amount = number_of_photos / 2
@@ -192,7 +192,7 @@ def picture_grid(image_dict, image_size, number_of_photos):
 
     for i in range(number_of_photos):
         image = QtGui.QImage()
-        label = QtGui.QLabel()
+        label = QtWidgets.QLabel()
 
         # Load profile photo data.
         label.setScaledContents(True)

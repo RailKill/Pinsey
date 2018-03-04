@@ -1,6 +1,6 @@
 import logging
 import pynder
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 
 class MatchesThread(QtCore.QThread):

@@ -1,32 +1,33 @@
 import html
 import webbrowser
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui, QtWidgets
 from pinsey.Constants import ICON_FILEPATH
 from pinsey.Utils import clickable, center
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
-class ImageWindow(QtGui.QMainWindow):
+class ImageWindow(QtWidgets.QMainWindow):
     def __init__(self, name, image_urls, main_window):
         super(ImageWindow, self).__init__()
         self.main_window = main_window
+        self.url_list = list(image_urls)
         self.photo_list = []
         self.current_image_count = -1  # Initialize at negative 1, so the index will start at 0 during update_image().
-        self.maximum_image_count = len(image_urls)
-        self.label_name = QtGui.QLabel(name)
-        self.label_count = QtGui.QLabel()
-        self.label_pic = QtGui.QLabel()
+        self.maximum_image_count = len(self.url_list)
+        self.label_name = QtWidgets.QLabel(name)
+        self.label_count = QtWidgets.QLabel()
+        self.label_pic = QtWidgets.QLabel()
         self.label_pic.setFixedWidth(600)
         self.label_pic.setFixedHeight(600)
         self.label_pic.setScaledContents(True)
         clickable(self.label_pic).connect(self.draw)
 
         # Download the images for viewing.
-        download_photos = DownloadPhotosThread(image_urls)
+        download_photos = DownloadPhotosThread(self.url_list)
         download_photos.data_downloaded.connect(self.ready)
         download_photos.start()
-        self.setCentralWidget(QtGui.QLabel('Fetching images of ' + name + '...'))
+        self.setCentralWidget(QtWidgets.QLabel('Fetching images of ' + name + '...'))
         self.setWindowTitle('Pinsey: Pictures of ' + name)
         self.setWindowIcon(QtGui.QIcon(ICON_FILEPATH))
         self.setFixedWidth(620)
@@ -63,12 +64,12 @@ class ImageWindow(QtGui.QMainWindow):
         self.label_pic.setPixmap(QtGui.QPixmap(pic))
 
         # Setup the layout and return the widget with this layout.
-        hbox = QtGui.QHBoxLayout()
+        hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.label_name)
 
         # Google search functionality only supported for web URLs for now. Local images have to upload manually.
         if not self.photo_list[self.current_image_count].url.startswith('file:'):
-            btn_google = QtGui.QPushButton('Google This', self)
+            btn_google = QtWidgets.QPushButton('Google This', self)
             btn_google.clicked.connect(
                 lambda web_search: (webbrowser.open('http://www.google.com/searchbyimage?image_url='
                                                     + html.escape(self.photo_list[self.current_image_count].url))))
@@ -77,11 +78,11 @@ class ImageWindow(QtGui.QMainWindow):
         hbox.addStretch(1)
         hbox.addWidget(self.label_count)
 
-        vbox = QtGui.QVBoxLayout()
+        vbox = QtWidgets.QVBoxLayout()
         vbox.addLayout(hbox)
         vbox.addWidget(self.label_pic)
 
-        widget = QtGui.QWidget()
+        widget = QtWidgets.QWidget()
         widget.setLayout(vbox)
         return widget
 

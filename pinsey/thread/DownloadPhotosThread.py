@@ -1,6 +1,6 @@
 import urllib
 from pinsey.Utils import EmptyDict
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 
 class DownloadPhotosThread(QtCore.QThread):

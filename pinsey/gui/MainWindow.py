@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 from pinsey import Constants
 from pinsey.Utils import clickable, center, picture_grid, horizontal_line, name_set, UserInformationWidgetStack
 from pinsey.gui.ImageWindow import ImageWindow
@@ -15,35 +15,35 @@ from pinsey.thread.SessionThread import SessionThread
 from pinsey.thread.MatchesThread import MatchesThread
 
 
-class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, app):
         super(MainWindow, self).__init__()
 
         # Initialize Window GUI controls.
-        self.label_status = QtGui.QLabel()
-        self.txt_location = QtGui.QLineEdit()
-        self.txt_auth = QtGui.QLineEdit()
-        self.txt_id = QtGui.QLineEdit()
-        self.txt_img_threshold = QtGui.QLineEdit()
-        self.txt_face_threshold = QtGui.QLineEdit()
-        self.txt_bio_threshold = QtGui.QLineEdit()
-        self.txt_pickup_threshold = QtGui.QLineEdit()
-        self.chk_decision = QtGui.QCheckBox('Decision-Making', self)
-        self.chk_exclude_friends = QtGui.QCheckBox('Exclude Facebook Friends', self)
-        self.chk_exclude_mutual = QtGui.QCheckBox('Exclude Mutual Friends', self)
-        self.chk_autochat = QtGui.QCheckBox('Autonomous Chatting', self)
-        self.chk_respond_list = QtGui.QCheckBox('Respond from List', self)
-        self.chk_respond_bot = QtGui.QCheckBox('Respond using Cleverbot', self)
-        self.profile_area = QtGui.QScrollArea()
-        self.matches_area = QtGui.QScrollArea()
+        self.label_status = QtWidgets.QLabel()
+        self.txt_location = QtWidgets.QLineEdit()
+        self.txt_auth = QtWidgets.QLineEdit()
+        self.txt_id = QtWidgets.QLineEdit()
+        self.txt_img_threshold = QtWidgets.QLineEdit()
+        self.txt_face_threshold = QtWidgets.QLineEdit()
+        self.txt_bio_threshold = QtWidgets.QLineEdit()
+        self.txt_pickup_threshold = QtWidgets.QLineEdit()
+        self.chk_decision = QtWidgets.QCheckBox('Decision-Making', self)
+        self.chk_exclude_friends = QtWidgets.QCheckBox('Exclude Facebook Friends', self)
+        self.chk_exclude_mutual = QtWidgets.QCheckBox('Exclude Mutual Friends', self)
+        self.chk_autochat = QtWidgets.QCheckBox('Autonomous Chatting', self)
+        self.chk_respond_list = QtWidgets.QCheckBox('Respond from List', self)
+        self.chk_respond_bot = QtWidgets.QCheckBox('Respond using Cleverbot', self)
+        self.profile_area = QtWidgets.QScrollArea()
+        self.matches_area = QtWidgets.QScrollArea()
 
         # Initialize system tray icon and menu.
-        tray_menu = QtGui.QMenu()
+        tray_menu = QtWidgets.QMenu()
         restore_action = tray_menu.addAction('Restore')
         restore_action.triggered.connect(self.restore_window)
         close_action = tray_menu.addAction('Exit')
         close_action.triggered.connect(self.close)
-        self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
+        self.tray_icon = QtWidgets.QSystemTrayIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.tray_icon.activated.connect(self.tray_event)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
@@ -77,7 +77,7 @@ class MainWindow(QtGui.QMainWindow):
     '''
 
     def setup_tabs(self):
-        tabs = QtGui.QTabWidget()
+        tabs = QtWidgets.QTabWidget()
         # Resize width and height
         tabs.resize(250, 150)
 
@@ -96,32 +96,32 @@ class MainWindow(QtGui.QMainWindow):
 
     def setup_settings(self):
         # Set layout of settings tab
-        tab_settings = QtGui.QWidget()
-        label_location = QtGui.QLabel('Location:')
-        label_auth = QtGui.QLabel('Facebook Auth Token:')
-        label_id = QtGui.QLabel('Facebook Profile ID:')
-        label_img_threshold = QtGui.QLabel('Minimum Number of Good Images:')
-        label_face_threshold = QtGui.QLabel('Faces Found Threshold:')
-        label_bio_threshold = QtGui.QLabel('Biography Minimum Length:')
-        label_friend_exclusion = QtGui.QLabel('Friend Exclusion: ')
-        label_pickup_threshold = QtGui.QLabel('Pick-up after X Messages:')
+        tab_settings = QtWidgets.QWidget()
+        label_location = QtWidgets.QLabel('Location:')
+        label_auth = QtWidgets.QLabel('Facebook Auth Token:')
+        label_id = QtWidgets.QLabel('Facebook Profile ID:')
+        label_img_threshold = QtWidgets.QLabel('Minimum Number of Good Images:')
+        label_face_threshold = QtWidgets.QLabel('Faces Found Threshold:')
+        label_bio_threshold = QtWidgets.QLabel('Biography Minimum Length:')
+        label_friend_exclusion = QtWidgets.QLabel('Friend Exclusion: ')
+        label_pickup_threshold = QtWidgets.QLabel('Pick-up after X Messages:')
 
-        btn_save = QtGui.QPushButton('Save Settings', self)
+        btn_save = QtWidgets.QPushButton('Save Settings', self)
         btn_save.setFixedHeight(50)
         btn_save.clicked.connect(self.save_settings)
-        btn_start = QtGui.QPushButton('Start Pinning', self)
+        btn_start = QtWidgets.QPushButton('Start Pinning', self)
         btn_start.clicked.connect(lambda: self.start_botting(btn_start))
         btn_start.setFixedHeight(50)
 
-        exclusion_widget = QtGui.QWidget()
-        exclusion_widget.setLayout(QtGui.QHBoxLayout())
+        exclusion_widget = QtWidgets.QWidget()
+        exclusion_widget.setLayout(QtWidgets.QHBoxLayout())
         exclusion_widget.layout().addWidget(self.chk_exclude_friends)
         exclusion_widget.layout().addWidget(self.chk_exclude_mutual)
         exclusion_widget.layout().addStretch()
 
         self.label_status.setAlignment(QtCore.Qt.AlignCenter)
-        self.txt_id.setEchoMode(QtGui.QLineEdit.Password)
-        self.txt_auth.setEchoMode(QtGui.QLineEdit.Password)
+        self.txt_id.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.txt_auth.setEchoMode(QtWidgets.QLineEdit.Password)
         self.txt_img_threshold.setValidator(QtGui.QIntValidator())
         self.txt_face_threshold.setValidator(QtGui.QIntValidator())
         self.txt_bio_threshold.setValidator(QtGui.QIntValidator())
@@ -130,7 +130,7 @@ class MainWindow(QtGui.QMainWindow):
         self.chk_decision.stateChanged.connect(self.decision_change)
         self.chk_autochat.setStyleSheet(Constants.CSS_FONT_CATEGORY)
 
-        grid = QtGui.QGridLayout()
+        grid = QtWidgets.QGridLayout()
         grid.setSpacing(10)
 
         grid.addWidget(self.label_status, 1, 0, 1, 2)
@@ -164,18 +164,18 @@ class MainWindow(QtGui.QMainWindow):
         return tab_settings
 
     def setup_profile(self):
-        tab_profile = QtGui.QWidget()
-        tab_profile.setLayout(QtGui.QVBoxLayout())
+        tab_profile = QtWidgets.QWidget()
+        tab_profile.setLayout(QtWidgets.QVBoxLayout())
         tab_profile.layout().addWidget(self.profile_area)
         return tab_profile
 
     def setup_userlisting(self, refresh_text, refresh_function, filter_stack=None):
-        tab_userlist = QtGui.QWidget()
-        scroll = QtGui.QScrollArea()
-        btn_refresh = QtGui.QPushButton(refresh_text, self)
+        tab_userlist = QtWidgets.QWidget()
+        scroll = QtWidgets.QScrollArea()
+        btn_refresh = QtWidgets.QPushButton(refresh_text, self)
         btn_refresh.clicked.connect(lambda: (refresh_function(scroll, btn_refresh, filter_stack)))
 
-        tab_userlist.setLayout(QtGui.QVBoxLayout())
+        tab_userlist.setLayout(QtWidgets.QVBoxLayout())
         if filter_stack:
             tab_userlist.layout().addWidget(filter_stack)
         tab_userlist.layout().addWidget(btn_refresh)
@@ -184,15 +184,15 @@ class MainWindow(QtGui.QMainWindow):
         return tab_userlist
 
     def setup_matches(self):
-        tab_matches = QtGui.QWidget()
-        tab_matches.setLayout(QtGui.QVBoxLayout())
+        tab_matches = QtWidgets.QWidget()
+        tab_matches.setLayout(QtWidgets.QVBoxLayout())
         tab_matches.layout().addWidget(self.matches_area)
         return tab_matches
 
     def load_profile(self):
         def populate(data, thread):
             self.download_thread.remove(thread)
-            profile_widget = QtGui.QWidget()
+            profile_widget = QtWidgets.QWidget()
             profil = self.session.profile
 
             # 1. Profile picture grid.
@@ -220,11 +220,11 @@ class MainWindow(QtGui.QMainWindow):
                     txt_bio.moveCursor(QtGui.QTextCursor.End)
 
             biography_max_length = 500
-            label_bio = QtGui.QLabel('Biography: ')
+            label_bio = QtWidgets.QLabel('Biography: ')
             remaining_chars = ' characters remaining'
-            label_chars = QtGui.QLabel(str(biography_max_length) + remaining_chars)
-            bio_widget = QtGui.QWidget()
-            bio_widget.setLayout(QtGui.QHBoxLayout())
+            label_chars = QtWidgets.QLabel(str(biography_max_length) + remaining_chars)
+            bio_widget = QtWidgets.QWidget()
+            bio_widget.setLayout(QtWidgets.QHBoxLayout())
             bio_widget.layout().addWidget(label_bio)
             bio_widget.layout().addStretch()
             bio_widget.layout().addWidget(label_chars)
@@ -235,57 +235,54 @@ class MainWindow(QtGui.QMainWindow):
                 bio_text = profil.bio
             except KeyError:
                 bio_text = ''
-                profil = self.session.update_profile({
-                    "bio": bio_text
-                })
 
-            txt_bio = QtGui.QPlainTextEdit(bio_text)
+            txt_bio = QtWidgets.QPlainTextEdit(bio_text)
             txt_bio.setFont(QtGui.QFont('Segoe UI Symbol', 16))
             txt_bio.textChanged.connect(bio_truncate)
             bio_truncate()
             pp_layout.addWidget(txt_bio, number_of_photos + 2, 0, 1, number_of_photos)
 
             # Form layout setup.
-            form_layout = QtGui.QFormLayout()
+            form_layout = QtWidgets.QFormLayout()
             # form_layout.setLabelAlignment(QtCore.Qt.AlignRight)
-            form_widget = QtGui.QWidget()
+            form_widget = QtWidgets.QWidget()
             form_widget.setLayout(form_layout)
             pp_layout.addWidget(form_widget, number_of_photos + 3, 0, 1, number_of_photos)
             form_label_style = 'margin-top: 0.3em'
 
             # 4. Gender
-            radio_gender_male = QtGui.QRadioButton('Male')
-            radio_gender_female = QtGui.QRadioButton('Female')
+            radio_gender_male = QtWidgets.QRadioButton('Male')
+            radio_gender_female = QtWidgets.QRadioButton('Female')
             if profil.gender == 'male':
                 radio_gender_male.setChecked(True)
             else:
                 radio_gender_female.setChecked(True)
-            gender_widget = QtGui.QWidget()
-            gender_widget.setLayout(QtGui.QHBoxLayout())
+            gender_widget = QtWidgets.QWidget()
+            gender_widget.setLayout(QtWidgets.QHBoxLayout())
             gender_widget.layout().addWidget(radio_gender_male)
             gender_widget.layout().addWidget(radio_gender_female)
-            label_gender = QtGui.QLabel('Gender: ')
+            label_gender = QtWidgets.QLabel('Gender: ')
             label_gender.setStyleSheet(form_label_style)
             form_layout.addRow(label_gender, gender_widget)
 
             # 5. Discoverable?
-            label_discoverable = QtGui.QLabel('Discoverable: ')
-            chk_discoverable = QtGui.QCheckBox()
+            label_discoverable = QtWidgets.QLabel('Discoverable: ')
+            chk_discoverable = QtWidgets.QCheckBox()
             chk_discoverable.setChecked(profil.discoverable)
             form_layout.addRow(label_discoverable, chk_discoverable)
 
             # 6. Maximum distance filter.
-            label_distance = QtGui.QLabel('Maximum Distance: ')
+            label_distance = QtWidgets.QLabel('Maximum Distance: ')
             label_distance.setStyleSheet(form_label_style)
-            slider_distance = QtGui.QSlider(QtCore.Qt.Horizontal)
+            slider_distance = QtWidgets.QSlider(QtCore.Qt.Horizontal)
             slider_distance.setRange(1, 100)
             slider_distance.setSingleStep(1)
             slider_distance.setValue(profil.distance_filter)
             slider_distance.valueChanged.connect(
                 lambda: (label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')))
-            label_distance_value = QtGui.QLabel(str(round(slider_distance.value() * 1.6)) + 'km')
-            distance_widget = QtGui.QWidget()
-            distance_widget.setLayout(QtGui.QHBoxLayout())
+            label_distance_value = QtWidgets.QLabel(str(round(slider_distance.value() * 1.6)) + 'km')
+            distance_widget = QtWidgets.QWidget()
+            distance_widget.setLayout(QtWidgets.QHBoxLayout())
             distance_widget.layout().addWidget(slider_distance)
             distance_widget.layout().addWidget(label_distance_value)
             form_layout.addRow(label_distance, distance_widget)
@@ -299,25 +296,25 @@ class MainWindow(QtGui.QMainWindow):
                 label_age_min.setText(str(slider_age_min.value()))
                 slider_age_max.setRange(slider_age_min.value(), 55)
 
-            label_age = QtGui.QLabel('Age: ')
+            label_age = QtWidgets.QLabel('Age: ')
             label_age.setStyleSheet(form_label_style)
-            label_to = QtGui.QLabel(' to ')
-            slider_age_max = QtGui.QSlider(QtCore.Qt.Horizontal)
+            label_to = QtWidgets.QLabel(' to ')
+            slider_age_max = QtWidgets.QSlider(QtCore.Qt.Horizontal)
             slider_age_max.setRange(profil.age_filter_min, 55)
             slider_age_max.setSingleStep(1)
             slider_age_max.setValue(55 if profil.age_filter_max > 54 else profil.age_filter_max)
             slider_age_max.valueChanged.connect(max_slider_handle)
-            label_age_max = QtGui.QLabel('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
+            label_age_max = QtWidgets.QLabel('55+' if slider_age_max.value() > 54 else str(slider_age_max.value()))
 
-            slider_age_min = QtGui.QSlider(QtCore.Qt.Horizontal)
+            slider_age_min = QtWidgets.QSlider(QtCore.Qt.Horizontal)
             slider_age_min.setRange(18, 46 if profil.age_filter_max > 46 else profil.age_filter_max)
             slider_age_min.setSingleStep(1)
             slider_age_min.setValue(profil.age_filter_min)
             slider_age_min.valueChanged.connect(min_slider_handle)
-            label_age_min = QtGui.QLabel(str(slider_age_min.value()))
+            label_age_min = QtWidgets.QLabel(str(slider_age_min.value()))
 
-            age_widget = QtGui.QWidget()
-            age_widget.setLayout(QtGui.QHBoxLayout())
+            age_widget = QtWidgets.QWidget()
+            age_widget.setLayout(QtWidgets.QHBoxLayout())
             age_widget.layout().addWidget(label_age_min)
             age_widget.layout().addWidget(slider_age_min)
             age_widget.layout().addWidget(label_to)
@@ -326,14 +323,14 @@ class MainWindow(QtGui.QMainWindow):
             form_layout.addRow(label_age, age_widget)
 
             # 8. Interested in which gender?
-            label_interested = QtGui.QLabel('Interested in: ')
+            label_interested = QtWidgets.QLabel('Interested in: ')
             label_interested.setStyleSheet(form_label_style)
-            chk_interested_male = QtGui.QCheckBox('Male')
+            chk_interested_male = QtWidgets.QCheckBox('Male')
             chk_interested_male.setChecked('male' in list(profil.interested_in))
-            chk_interested_female = QtGui.QCheckBox('Female')
+            chk_interested_female = QtWidgets.QCheckBox('Female')
             chk_interested_female.setChecked('female' in list(profil.interested_in))
-            interested_widget = QtGui.QWidget()
-            interested_widget.setLayout(QtGui.QHBoxLayout())
+            interested_widget = QtWidgets.QWidget()
+            interested_widget.setLayout(QtWidgets.QHBoxLayout())
             interested_widget.layout().addWidget(chk_interested_male)
             interested_widget.layout().addWidget(chk_interested_female)
             form_layout.addRow(label_interested, interested_widget)
@@ -342,12 +339,17 @@ class MainWindow(QtGui.QMainWindow):
             def save_profile():
                 # Must have an interested gender before proceeding.
                 if not chk_interested_male.isChecked() and not chk_interested_female.isChecked():
-                    QtGui.QMessageBox().critical(self, 'Profile Error',
+                    QtWidgets.QMessageBox().critical(self, 'Profile Error',
                                                  'You must be interested in at least one gender.')
                     return
 
                 # Set profile values.
-                profile.bio = txt_bio.toPlainText()
+                try:
+                    profile.bio = txt_bio.toPlainText()
+                except KeyError:
+                    self.session.update_profile({
+                        "bio": txt_bio.toPlainText()
+                    })
                 profile.discoverable = chk_discoverable.isChecked()
                 profile.distance_filter = slider_distance.value()
                 profile.age_filter_min = slider_age_min.value()
@@ -370,13 +372,16 @@ class MainWindow(QtGui.QMainWindow):
                     # "squads_discoverable": False
                 })
 
-                QtGui.QMessageBox.information(self, 'Profile Saved', 'Profile information has been updated.')
+                QtWidgets.QMessageBox.information(self, 'Profile Saved', 'Profile information has been updated.')
                 reload_profile()
 
             def reload_profile():
                 # Refresh GUI.
                 label_name.setText(name_set(profil.name, profil.sex[1], 0, profil.banned).text())
-                txt_bio.setPlainText(profil.bio)
+                try:
+                    txt_bio.setPlainText(profil.bio)
+                except KeyError:
+                    txt_bio.setPlainText('')
                 chk_discoverable.setChecked(profil.discoverable)
                 slider_distance.setValue(profil.distance_filter)
                 label_distance_value.setText(str(round(slider_distance.value() * 1.6)) + 'km')
@@ -389,7 +394,7 @@ class MainWindow(QtGui.QMainWindow):
                 chk_interested_male.setChecked(0 in list(profil.interested))  # interested_in workaround.
                 chk_interested_female.setChecked(1 in list(profil.interested))  # interested_in workaround.
 
-            btn_save_profile = QtGui.QPushButton('Update Profile')
+            btn_save_profile = QtWidgets.QPushButton('Update Profile')
             btn_save_profile.setFixedHeight(50)
             btn_save_profile.clicked.connect(save_profile)
             pp_layout.addWidget(btn_save_profile, number_of_photos + 4, 0, 1, number_of_photos)
@@ -424,15 +429,15 @@ class MainWindow(QtGui.QMainWindow):
             if updates_balloon_message:
                 self.tray_icon.showMessage('New Update!', updates_balloon_message)
 
-            matches_list = QtGui.QWidget()
-            matches_list.setLayout(QtGui.QVBoxLayout())
+            matches_list = QtWidgets.QWidget()
+            matches_list.setLayout(QtWidgets.QVBoxLayout())
             for match in matches:
                 # Load thumbnail of match.
-                label_thumbnail = QtGui.QLabel()
+                label_thumbnail = QtWidgets.QLabel()
                 label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE / 2)
                 label_thumbnail.setFixedHeight(Constants.THUMBNAIL_SIZE / 2)
                 label_thumbnail.setScaledContents(True)
-                download_thread = DownloadPhotosThread([match.user.photos[0]])
+                download_thread = DownloadPhotosThread([next(match.user.photos)])
                 download_thread.data_downloaded.connect(
                     lambda data, l=label_thumbnail, t=download_thread: load_thumbnail(data, l, t)
                 )
@@ -442,16 +447,16 @@ class MainWindow(QtGui.QMainWindow):
                 # Create name set.
                 label_name = name_set(match.user.name, match.user.gender, match.user.age)
                 # Create match date label.
-                label_match_date = QtGui.QLabel('<b>Match Date: </b>' + match.match_date)
+                label_match_date = QtWidgets.QLabel('<b>Match Date: </b>' + match.match_date)
                 # Create last message text.
-                label_last_message = QtGui.QLabel(match.messages[0] if match.messages else 'Conversation not started.')
+                label_last_message = QtWidgets.QLabel(match.messages[0] if match.messages else 'Conversation not started.')
                 # Create notification text.
-                label_notification = QtGui.QLabel('NEW UPDATE!' if match in updates else '')
+                label_notification = QtWidgets.QLabel('NEW UPDATE!' if match in updates else '')
                 label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
 
                 # Create a card for each match.
-                card_widget = QtGui.QWidget()
-                card_layout = QtGui.QGridLayout()
+                card_widget = QtWidgets.QWidget()
+                card_layout = QtWidgets.QGridLayout()
                 card_layout.setSpacing(10)
                 card_layout.addWidget(label_thumbnail, 1, 0, 5, 1)
                 card_layout.addWidget(label_name, 1, 1)
@@ -490,9 +495,9 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 # No more users to go through. Reset the distance filter so the session will fetch the users again.
                 self.session.profile.distance_filter = self.session.profile.distance_filter
-                no_more_widget = QtGui.QWidget()
-                no_more_widget.setLayout(QtGui.QHBoxLayout())
-                no_more_widget.layout().addWidget(QtGui.QLabel('No more users to show for now.'))
+                no_more_widget = QtWidgets.QWidget()
+                no_more_widget.setLayout(QtWidgets.QHBoxLayout())
+                no_more_widget.layout().addWidget(QtWidgets.QLabel('No more users to show for now.'))
                 list_area.setWidget(no_more_widget)
 
         if self.session:
@@ -503,25 +508,25 @@ class MainWindow(QtGui.QMainWindow):
             # Show loading screen in the meantime.
             refresh_button.setText('Refreshing...')
             refresh_button.setDisabled(True)
-            loading = QtGui.QWidget()
-            loading.setLayout(QtGui.QHBoxLayout())
+            loading = QtWidgets.QWidget()
+            loading.setLayout(QtWidgets.QHBoxLayout())
             loading_icon = QtGui.QMovie('../resources/icons/heart-32x32.gif')
-            loading_label = QtGui.QLabel()
+            loading_label = QtWidgets.QLabel()
             loading_label.setMovie(loading_icon)
             loading_icon.start()
-            loading.layout().addWidget(QtGui.QLabel('Loading...'))
+            loading.layout().addWidget(QtWidgets.QLabel('Loading...'))
             loading.layout().addWidget(loading_label)
             list_area.setWidget(loading)
         else:
-            label_noauth = QtGui.QLabel('Not connected. Please enter correct authentication details in Settings tab.')
-            noauth = QtGui.QWidget()
-            noauth.setLayout(QtGui.QVBoxLayout())
+            label_noauth = QtWidgets.QLabel('Not connected. Please enter correct authentication details in Settings tab.')
+            noauth = QtWidgets.QWidget()
+            noauth.setLayout(QtWidgets.QVBoxLayout())
             noauth.layout().addWidget(label_noauth)
             list_area.setWidget(noauth)
 
     def populate_users(self, user_list, is_history):
-        user_list_widget = QtGui.QWidget()
-        user_list_widget.setLayout(QtGui.QVBoxLayout())
+        user_list_widget = QtWidgets.QWidget()
+        user_list_widget.setLayout(QtWidgets.QVBoxLayout())
 
         # Populate the list with users if available.
         for user in user_list:
@@ -529,7 +534,7 @@ class MainWindow(QtGui.QMainWindow):
             try:
                 thumbnail = QtGui.QImage()
                 thumbnail.loadFromData(user.thumb_data)
-                label_thumbnail = QtGui.QLabel()
+                label_thumbnail = QtWidgets.QLabel()
                 label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE)
                 label_thumbnail.setFixedHeight(Constants.THUMBNAIL_SIZE)
                 label_thumbnail.setScaledContents(True)
@@ -542,8 +547,8 @@ class MainWindow(QtGui.QMainWindow):
                 print('User population error: ' + str(ex))  # Doesn't matter, ignore if this user fails to populate.
                 continue
 
-            card = QtGui.QWidget()
-            card_layout = QtGui.QGridLayout()
+            card = QtWidgets.QWidget()
+            card_layout = QtWidgets.QGridLayout()
             card_layout.setSpacing(10)
             info_widgets = UserInformationWidgetStack(user, self.friend_list)
             card_layout.addWidget(label_thumbnail, 1, 0, 8, 1)
@@ -555,12 +560,12 @@ class MainWindow(QtGui.QMainWindow):
             card_layout.addWidget(info_widgets.jobs, 6, 1)
             card_layout.addWidget(info_widgets.bio, 7, 1)
 
-            like_buttons_layout = QtGui.QHBoxLayout()
+            like_buttons_layout = QtWidgets.QHBoxLayout()
             if not is_history:
                 # Like, dislike and super like buttons.
-                btn_like = QtGui.QPushButton('Like', self)
-                btn_dislike = QtGui.QPushButton('Dislike', self)
-                btn_superlike = QtGui.QPushButton('Super Like', self)
+                btn_like = QtWidgets.QPushButton('Like', self)
+                btn_dislike = QtWidgets.QPushButton('Dislike', self)
+                btn_superlike = QtWidgets.QPushButton('Super Like', self)
                 # 'ignore' is just a name to store and ignore the boolean that comes from the assigning the user
                 # parameter into the lambda scope. Do not remove, required to work.
                 btn_like.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
@@ -591,13 +596,13 @@ class MainWindow(QtGui.QMainWindow):
                 else:
                     added_by_style = "<span style='" + Constants.CSS_FONT_MESSAGE_YOU + "font-size: large'>%s</span>"
 
-                label_date_added = QtGui.QLabel(
+                label_date_added = QtWidgets.QLabel(
                     '<b>Date Added: </b>' +
                     user.date_added.strftime("%B %d, %Y at %I:%M%p") + ' by ' +
                     added_by_style % user.added_by
                 )
                 label_date_added.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-                btn_delete = QtGui.QPushButton('Delete', self)
+                btn_delete = QtWidgets.QPushButton('Delete', self)
                 btn_delete.clicked.connect(lambda ignore, u=user, b=btn_delete: (
                     self.likes_handler.delete_history(u),
                     b.setText('Deleted'),
@@ -636,7 +641,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.hide()
 
     def tray_event(self, reason):
-        if reason == QtGui.QSystemTrayIcon.DoubleClick:
+        if reason == QtWidgets.QSystemTrayIcon.DoubleClick:
             self.restore_window()
 
     def restore_window(self):
@@ -651,7 +656,7 @@ class MainWindow(QtGui.QMainWindow):
         def session_connected(data):
             if data.session:
                 if data.exception:
-                    QtGui.QMessageBox.warning(self, 'Warning', str(data.exception))
+                    QtWidgets.QMessageBox.warning(self, 'Warning', str(data.exception))
                 self.session = data.session
                 self.friend_list = list(self.session.get_fb_friends())
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
@@ -660,7 +665,7 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 self.session = None
                 self.label_status.setText(status_text + '<span style="color:red;font-weight:bold">Offline</span>')
-                QtGui.QMessageBox.critical(self, 'Error', str(data.exception))
+                QtWidgets.QMessageBox.critical(self, 'Error', str(data.exception))
 
         status_text = 'Tinder Status: '
 
@@ -672,7 +677,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.session = None
             self.label_status.setText(status_text + '<span style="color:red;font-weight:bold">Offline</span>')
-            QtGui.QMessageBox.information(self, 'Connect to Tinder', 'In order to start using Pinsey, you will need '
+            QtWidgets.QMessageBox.information(self, 'Connect to Tinder', 'In order to start using Pinsey, you will need '
                                                                      'to key in your rough location (similar to how '
                                                                      'you would search on Google Maps), Facebook '
                                                                      'authentication token from Tinder, and Facebook '
@@ -771,7 +776,7 @@ class MainWindow(QtGui.QMainWindow):
 
         with open(config_path, 'w') as f:
             config.write(f)
-        QtGui.QMessageBox.information(self, 'Information', 'Settings saved.')
+        QtWidgets.QMessageBox.information(self, 'Information', 'Settings saved.')
         self.connect_tinder()
 
     def start_botting(self, button):
@@ -802,7 +807,7 @@ class MainWindow(QtGui.QMainWindow):
             button.clicked.disconnect()
             button.clicked.connect(lambda: self.stop_botting(button))
         else:
-            QtGui.QMessageBox.critical(self, 'Unable to Start Pinning', 'You are not connected to Tinder yet.')
+            QtWidgets.QMessageBox.critical(self, 'Unable to Start Pinning', 'You are not connected to Tinder yet.')
 
     def stop_botting(self, button):
         self.likes_bot.stop()

@@ -1,5 +1,5 @@
 import urllib
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 
 class NearbyUsersThread(QtCore.QThread):
@@ -31,7 +31,7 @@ class NearbyUsersThread(QtCore.QThread):
         for i in range(limit):
             try:
                 user = next(nearby_users)  # Iterate through generator object.
-                user.thumb_data = urllib.request.urlopen(user.photos[0]).read()
+                user.thumb_data = urllib.request.urlopen(next(user.photos)).read()
                 user_list.append(user)
             except urllib.error.HTTPError as ex:
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?

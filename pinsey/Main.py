@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from PyQt4 import QtGui
+from PyQt5 import QtWidgets
 from pinsey.Constants import LOGS_DATA_DIR
 from pinsey.gui.MainWindow import MainWindow
 
@@ -18,6 +18,21 @@ logging.basicConfig(filename=LOGS_DATA_DIR + 'pinsey.log',
                     datefmt='%H:%M:%S',
                     level=logging.INFO)
 
-app = QtGui.QApplication(sys.argv)
+
+# The exception hook defined here enables PyQt5 to tell us any exceptions instead of just swallowing it.
+# Back up the reference to the exceptionhook
+sys._excepthook = sys.excepthook
+
+def my_exception_hook(exctype, value, traceback):
+    # Print the error and traceback
+    print(exctype, value, traceback)
+    # Call the normal Exception hook after
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+# Set the exception hook to our wrapping function
+sys.excepthook = my_exception_hook
+
+app = QtWidgets.QApplication(sys.argv)
 gui = MainWindow(app)
 sys.exit(app.exec_())

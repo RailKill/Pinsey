@@ -1,5 +1,5 @@
 import pynder
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 from geopy.exc import GeocoderTimedOut
 from geopy.geocoders import GoogleV3
 from pinsey.Utils import EmptyDict

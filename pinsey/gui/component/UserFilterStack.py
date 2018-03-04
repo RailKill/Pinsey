@@ -1,7 +1,7 @@
-from PyQt4 import QtGui
+from PyQt5 import QtWidgets
 
 
-class UserFilterStack(QtGui.QWidget):
+class UserFilterStack(QtWidgets.QWidget):
     def __init__(self, filter_list):
         """
             This is a widget which contains other widgets that make up of the filter section of the user list GUI.
@@ -13,19 +13,19 @@ class UserFilterStack(QtGui.QWidget):
         """
         super().__init__()
         self.filter_list = filter_list
-        label_sort_by = QtGui.QLabel('Sort By: ')
-        self.cmb_sort_by = QtGui.QComboBox()
+        label_sort_by = QtWidgets.QLabel('Sort By: ')
+        self.cmb_sort_by = QtWidgets.QComboBox()
         self.cmb_sort_by.addItems(self.filter_list)
-        self.radio_ascending = QtGui.QRadioButton('Ascending')
+        self.radio_ascending = QtWidgets.QRadioButton('Ascending')
         self.radio_ascending.setChecked(True)
-        self.radio_descending = QtGui.QRadioButton('Descending')
-        label_filter = QtGui.QLabel('Filter: ')
-        self.chk_male = QtGui.QCheckBox('Male')
+        self.radio_descending = QtWidgets.QRadioButton('Descending')
+        label_filter = QtWidgets.QLabel('Filter: ')
+        self.chk_male = QtWidgets.QCheckBox('Male')
         self.chk_male.setChecked(True)
-        self.chk_female = QtGui.QCheckBox('Female')
+        self.chk_female = QtWidgets.QCheckBox('Female')
         self.chk_female.setChecked(True)
 
-        layout = QtGui.QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         layout.addWidget(label_sort_by)
         layout.addWidget(self.cmb_sort_by)
         layout.addWidget(self.radio_ascending)

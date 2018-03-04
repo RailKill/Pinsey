@@ -1,6 +1,6 @@
 import logging
 from random import randint
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 
 class LikesBotThread(QtCore.QThread):

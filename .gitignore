@@ -1,7 +1,6 @@
 # Pinsey's storage/system files containing sensitive information.
 *.ini
 *.csv
-*.txt
 images
 
 # ==========================================================================================================

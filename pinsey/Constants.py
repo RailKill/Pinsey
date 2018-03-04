@@ -1,7 +1,7 @@
 import appdirs
 import re
 import os
-from PyQt4.QtGui import QFont
+from PyQt5.QtGui import QFont
 
 
 # Name of this application.
