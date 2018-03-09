@@ -15,7 +15,7 @@ if not os.path.exists(log_dir):
 logging.basicConfig(filename=LOGS_DATA_DIR + 'pinsey.log',
                     filemode='a',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
+                    datefmt='%d/%m/%Y %H:%M:%S',
                     level=logging.INFO)
 
 

@@ -52,14 +52,22 @@ class DecisionHandler:
             # Biography threshold check.
             if self.bio_threshold > 0:
                 if len(user.bio) < self.bio_threshold:
-                    self.logger.info(u'Disliking ' + user.name + ' due to not having a long enough biography.')
+                    self.logger.info(u'Disliking ' + user.name + ' due to biography less than ' +
+                                     str(self.bio_threshold) + ' characters.')
                     return False
 
             # Biography blacklist word check.
-            if any(blacklisted_substring.lower() in user.bio.lower() for blacklisted_substring in self.bio_blacklist):
-                self.logger.info(
-                    u'Disliking ' + user.name + ' for having a biography that contains a blacklisted keyword.'
-                )
+            match = [blacklisted_substring for blacklisted_substring in self.bio_blacklist
+                     if blacklisted_substring.lower() in user.bio.lower()]
+            # any(blacklisted_substring.lower() in user.bio.lower() for blacklisted_substring in self.bio_blacklist)
+            if match:
+                self.logger.info(u'Disliking ' + user.name + ', biography contains blacklisted keyword(s): ' +
+                                 ', '.join(match))
+                return False
+        else:
+            # A biography threshold of more than 0 requires a biography to be present.
+            if self.bio_threshold > 0:
+                self.logger.info(u'Disliking ' + user.name + ' for not having a biography.')
                 return False
 
         # Check each image for this user if it is within the specified minimum and maximum face threshold.
@@ -69,11 +77,14 @@ class DecisionHandler:
             if self.face_minimum <= number <= self.face_threshold:
                 number_of_good_images += 1
 
-        if number_of_good_images >= self.img_threshold:
-            return True
-        else:
-            self.logger.info(u'Disliking ' + user.name + ' due to not having good enough images.')
+        if number_of_good_images < self.img_threshold:
+            reason = ' for not having enough good images (detected ' + str(number_of_good_images) + \
+                     ', required ' + str(self.img_threshold) + ').'
+            self.logger.info(u'Disliking ' + user.name + reason)
             return False
+
+        # After analysis, if there is no reason to dislike, then return True.
+        return True
 
     def initialize_blacklist(self):
         if os.path.exists(self.blacklist_path):
