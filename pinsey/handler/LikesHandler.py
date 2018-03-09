@@ -60,7 +60,8 @@ class LikesHandler:
 
         if found:
             self.history[filepath].remove(found)
-            shutil.rmtree(self.photo_storage_path + user.id, ignore_errors=True)  # Remove images for this user.
+            # Remove images for this user.
+            shutil.rmtree(self.photo_storage_path + user.name + '_' + user.id, ignore_errors=True)
             self._rewrite(filepath)
 
     def _rewrite(self, filepath):
@@ -97,7 +98,7 @@ class LikesHandler:
                     user.date_added = dateutil.parser.parse(user.date_added)
                     user.distance_km = float(user.distance_km)
                     user.jobs = ast.literal_eval(user.jobs)
-                    user.photos = glob.glob(self.photo_storage_path + user.id + '/*.jpg')
+                    user.photos = glob.glob(self.photo_storage_path + user.name + '_' + user.id + '/*.jpg')
                     user.schools = ast.literal_eval(user.schools)
                     user.common_connections = ast.literal_eval(user.common_connections)
                     user.common_likes = ast.literal_eval(user.common_likes)
@@ -123,15 +124,16 @@ class LikesHandler:
             :return: None
         """
         def save_photos(data):
+            photos = []  # Store a list of photo directory paths for this user.
             for index, photo in enumerate(data):
-                photo_path = os.path.join(self.photo_storage_path + user.id, str(index) + '.jpg')
+                photo_path = os.path.join(self.photo_storage_path + user.name + '_' + user.id, str(index) + '.jpg')
                 dirname = os.path.dirname(photo_path)
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)
 
                 with open(photo_path, 'wb') as jpgfile:
                     jpgfile.write(photo.data)
-                user.photos[index] = photo_path
+                photos.append(photo_path)
 
             file_exists = os.path.exists(filepath)
             with open(filepath, 'a', newline='', encoding='utf-8') as csvfile:
@@ -140,6 +142,7 @@ class LikesHandler:
                     writer.writeheader()
 
                 user_dict = user.__dict__
+                user_dict['photos'] = photos  # Override the 'photos' value with a list.
                 user_dict['age'] = user.age
                 user_dict['distance_km'] = user.distance_km
                 user_dict['gender'] = user.gender
