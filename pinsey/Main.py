@@ -12,10 +12,9 @@ log_dir = os.path.dirname(log_path)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-logging.basicConfig(filename=LOGS_DATA_DIR + 'pinsey.log',
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+logging.basicConfig(format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%d/%m/%Y %H:%M:%S',
+                    handlers=[logging.FileHandler(log_path, 'a', 'utf-8')],
                     level=logging.INFO)
 
 
