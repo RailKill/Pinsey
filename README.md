@@ -12,3 +12,8 @@ I also did not set up virtualenv to manage the dependencies yet, but included th
 Then you need your Facebook auth key, which you can extract by HTTPS proxying and viewing the authentication request when logging into Tinder. 
 You can see [this example guide by Joel Auterson](http://www.joelotter.com/2015/05/17/dj-khaled-tinder-bot.html#my-mate-charles).
 By entering your authentication key and ID, you should be able to login.
+
+Saved images and user list are hard-coded to be stored in your user data folder for now.
+- Windows: ```C:\Users\User\AppData\Local\RailKill\Pinsey```
+- Mac: ```~/Library/Application Support/RailKill/Pinsey```
+- Unix: ```~/.local/share/RailKill/Pinsey```
