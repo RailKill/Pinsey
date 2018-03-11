@@ -2,7 +2,8 @@ from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pinsey import Constants
-from pinsey.Utils import clickable, center, picture_grid, horizontal_line, name_set, UserInformationWidgetStack
+from pinsey.Utils import clickable, center, picture_grid, horizontal_line, resolve_message_sender, \
+    name_set, UserInformationWidgetStack
 from pinsey.gui.ImageWindow import ImageWindow
 from pinsey.gui.MessageWindow import MessageWindow
 from pinsey.gui.component.UserFilterStack import UserFilterStack
@@ -36,6 +37,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.chk_respond_bot = QtWidgets.QCheckBox('Respond using Cleverbot', self)
         self.profile_area = QtWidgets.QScrollArea()
         self.matches_area = QtWidgets.QScrollArea()
+        self.chk_refresh = QtWidgets.QCheckBox('Refresh every: ')
+        self.txt_refresh_interval = QtWidgets.QLineEdit()
 
         # Initialize system tray icon and menu.
         tray_menu = QtWidgets.QMenu()
@@ -187,6 +190,21 @@ class MainWindow(QtWidgets.QMainWindow):
     def setup_matches(self):
         tab_matches = QtWidgets.QWidget()
         tab_matches.setLayout(QtWidgets.QVBoxLayout())
+
+        match_refresh_widget = QtWidgets.QWidget()
+        match_refresh_widget.setLayout(QtWidgets.QHBoxLayout())
+        self.txt_refresh_interval.setValidator(QtGui.QIntValidator(10, 300))
+        self.txt_refresh_interval.setText("60")  # Default 60 second refresh interval
+        lbl_refresh_unit = QtWidgets.QLabel('seconds')
+        match_refresh_widget.layout().addWidget(self.chk_refresh)
+        match_refresh_widget.layout().addWidget(self.txt_refresh_interval)
+        match_refresh_widget.layout().addWidget(lbl_refresh_unit)
+        match_refresh_widget.layout().addStretch()
+        btn_refresh = QtWidgets.QPushButton('Refresh', self)
+        btn_refresh.clicked.connect(self.load_matches)
+        match_refresh_widget.layout().addWidget(btn_refresh)
+
+        tab_matches.layout().addWidget(match_refresh_widget)
         tab_matches.layout().addWidget(self.matches_area)
         return tab_matches
 
@@ -411,28 +429,29 @@ class MainWindow(QtWidgets.QMainWindow):
         self.download_thread.append(download_thread)
         download_thread.start()
 
-    def load_matches(self):
+    def load_matches(self, interval=0):
         def load_thumbnail(photo, label, thread):
             self.download_thread.remove(thread)
             thumbnail = QtGui.QImage()
             thumbnail.loadFromData(photo[0].data)
             label.setPixmap(QtGui.QPixmap(thumbnail))
 
-        def populate_matches(matches):
-            updates = self.session.updates()
+        def populate_matches(data):
+            matches = data
+            updates = list(self.session.updates())
             updates_balloon_message = ''
-            for update in updates:
-                if update in matches:
-                    updates_balloon_message += update.user.name
-                    if not update.messages:
-                        updates_balloon_message += ' (NEW) '
-                    updates_balloon_message += '\n'
-            if updates_balloon_message:
-                self.tray_icon.showMessage('New Update!', updates_balloon_message)
 
             matches_list = QtWidgets.QWidget()
             matches_list.setLayout(QtWidgets.QVBoxLayout())
             for match in matches:
+                # Show notification if it is in updates.
+                for update in updates:
+                    if match.user.id == update.user.id:
+                        updates_balloon_message += update.user.name
+                        if not update.messages:
+                            updates_balloon_message += ' (NEW) '
+                        updates_balloon_message += '\n'
+
                 # Load thumbnail of match.
                 label_thumbnail = QtWidgets.QLabel()
                 label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE / 2)
@@ -448,9 +467,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 # Create name set.
                 label_name = name_set(match.user.name, match.user.gender, match.user.age)
                 # Create match date label.
-                label_match_date = QtWidgets.QLabel('<b>Match Date: </b>' + match.match_date)
+                label_match_date = QtWidgets.QLabel('<b>Match Date: </b>' +
+                                                    match.match_date.strftime("%B %d, %Y at %I:%M%p"))
                 # Create last message text.
-                label_last_message = QtWidgets.QLabel(match.messages[0] if match.messages else 'Conversation not started.')
+                last_message = match.messages[len(match.messages) - 1]
+                last_poster = resolve_message_sender(last_message, match)
+                label_last_message = QtWidgets.QLabel(last_poster + last_message.body if match.messages
+                                                      else 'Conversation not started.')
                 # Create notification text.
                 label_notification = QtWidgets.QLabel('NEW UPDATE!' if match in updates else '')
                 label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
@@ -471,14 +494,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 matches_list.layout().addWidget(card_widget)
 
                 # Check if any MessageWindow for this match. If there is, update the messages area.
-                for window in self.main_window.windows:
+                for window in self.windows:
                     if isinstance(window, MessageWindow) and match == window.match:
                         window.load_messages(match.messages)
 
             self.matches_area.setWidget(matches_list)
             self.matches_area.setAlignment(QtCore.Qt.AlignCenter)
+            if updates_balloon_message:
+                self.tray_icon.showMessage('Pinsey: New Update!', updates_balloon_message)
 
-        self.matches_thread = MatchesThread(self.session)
+            if self.chk_refresh.isChecked():
+                self.load_matches(int(self.txt_refresh_interval.text()))
+
+        self.matches_thread = MatchesThread(self.session, interval)
         self.matches_thread.data_downloaded.connect(populate_matches)
         self.matches_thread.start()
 

@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE, CSS_FONT_NOTIFICATION
+from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE, CSS_FONT_NOTIFICATION, CSS_FONT_MESSAGE_MATCH, \
+    CSS_FONT_MESSAGE_YOU
 
 
 class EmptyDict(dict):
@@ -135,6 +136,13 @@ def get_connection_name(connection_id, friend_list):
         if connection_id == friend.facebook_id:
             return friend.name
     return ''
+
+
+def resolve_message_sender(message, match):
+    if message.sender.id == match.user.id:
+        return '<span style="' + CSS_FONT_MESSAGE_MATCH + '">' + match.user.name + ': </span>'
+    else:
+        return '<span style="' + CSS_FONT_MESSAGE_YOU + '">You: </span>'
 
 
 def name_set(name, gender, age=0, banned=False):

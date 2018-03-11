@@ -20,11 +20,12 @@ class MatchesThread(QtCore.QThread):
     """
     data_downloaded = QtCore.pyqtSignal(object)
 
-    def __init__(self, session):
+    def __init__(self, session, delay):
         QtCore.QThread.__init__(self)
         self.session = session
         self.abort = False
         self.bot_running = False
+        self.delay = delay * 1000  # Convert milliseconds to seconds
         self.logger = logging.getLogger(__name__)
 
     def stop(self):
@@ -37,21 +38,20 @@ class MatchesThread(QtCore.QThread):
         self.bot_running = False
 
     def run(self):
-        while not self.abort:
-            try:
-                matches = self.session.matches()
-                self.data_downloaded.emit(matches)
-            except pynder.errors.RequestError as requestError:
-                if 504 in requestError.args:
-                    self.logger.error('Error getting matches: 504 Gateway Timeout. Retrying...')
-                elif 401 in requestError.args:
-                    self.logger.error('Error getting matches: 401 Unauthorized. Renewing session...')
-                    # TODO: Renew the pynder session.
-                else:
-                    raise
+        self.msleep(self.delay)
+        try:
+            matches = self.session.matches()
+            self.data_downloaded.emit(matches)
+        except pynder.errors.RequestError as requestError:
+            if 504 in requestError.args:
+                self.logger.error('Error getting matches: 504 Gateway Timeout. Retrying...')
+            elif 401 in requestError.args:
+                self.logger.error('Error getting matches: 401 Unauthorized. Renewing session...')
+                # TODO: Renew the pynder session.
+            else:
+                raise
 
-            # TODO: Bot handle matches. Message if needed.
-            # if self.bot_running:
-                # MatchesThread(matches)
+        # TODO: Bot handle matches. Message if needed.
+        # if self.bot_running:
+            # MatchesThread(matches)
 
-            self.msleep(5000)  # Sleep for 5 seconds.
