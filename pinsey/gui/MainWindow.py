@@ -87,7 +87,8 @@ class MainWindow(QtWidgets.QMainWindow):
         filter_list = ['Date Added', 'Name', 'Age', 'Distance KM']
         tabs.addTab(self.setup_userlisting('Reload', self.reload_likes, UserFilterStack(filter_list)), 'Liked')
         tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes, UserFilterStack(filter_list)), 'Disliked')
-        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users, UserFilterStack(filter_list[1:])), 'Browse')
+        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users,
+                                           UserFilterStack(filter_list[1:], False)), 'Browse')
         tabs.addTab(self.setup_matches(), 'Matches')
 
         # Set main window layout

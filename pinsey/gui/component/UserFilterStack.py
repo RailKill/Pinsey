@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 
 
 class UserFilterStack(QtWidgets.QWidget):
-    def __init__(self, filter_list):
+    def __init__(self, filter_list, descending=True):
         """
             This is a widget which contains other widgets that make up of the filter section of the user list GUI.
             It takes in a list of strings to sort by. These strings are attribute names of the Pynder User object
@@ -10,6 +10,8 @@ class UserFilterStack(QtWidgets.QWidget):
 
             :param filter_list:     List of User attribute names to be sorted.
             :type filter_list:      list of str
+            :param descending:      Sets the default sorting to descending if True.
+            :type descending:       bool
         """
         super().__init__()
         self.filter_list = filter_list
@@ -18,7 +20,12 @@ class UserFilterStack(QtWidgets.QWidget):
         self.cmb_sort_by.addItems(self.filter_list)
         self.radio_ascending = QtWidgets.QRadioButton('Ascending')
         self.radio_descending = QtWidgets.QRadioButton('Descending')
-        self.radio_descending.setChecked(True)
+
+        if descending:
+            self.radio_descending.setChecked(True)
+        else:
+            self.radio_ascending.setChecked(True)
+
         label_filter = QtWidgets.QLabel('Filter: ')
         self.chk_male = QtWidgets.QCheckBox('Male')
         self.chk_male.setChecked(True)
