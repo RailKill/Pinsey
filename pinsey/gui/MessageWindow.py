@@ -2,7 +2,7 @@ from PyQt5 import QtGui, QtWidgets
 from pinsey.Constants import ICON_FILEPATH, THUMBNAIL_SIZE, NUMBER_OF_PHOTOS, \
     CSS_FONT_MESSAGE_YOU, FONT_EMOJI
 from pinsey.Utils import center, picture_grid, resolve_message_sender, UserInformationWidgetStack
-from thread.DownloadPhotosThread import DownloadPhotosThread
+from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
 class MessageWindow(QtWidgets.QMainWindow):
