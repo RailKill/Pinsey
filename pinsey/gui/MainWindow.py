@@ -470,10 +470,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 label_match_date = QtWidgets.QLabel('<b>Match Date: </b>' +
                                                     match.match_date.strftime("%B %d, %Y at %I:%M%p"))
                 # Create last message text.
-                last_message = match.messages[len(match.messages) - 1]
-                last_poster = resolve_message_sender(last_message, match)
-                label_last_message = QtWidgets.QLabel(last_poster + last_message.body if match.messages
-                                                      else 'Conversation not started.')
+                if match.messages:
+                    last_message = match.messages[len(match.messages) - 1]
+                    last_poster = resolve_message_sender(last_message, match)
+                    display_message = last_poster + last_message.body
+                else:
+                    display_message = 'Conversation not started.'
+
+                label_last_message = QtWidgets.QLabel(display_message)
                 # Create notification text.
                 label_notification = QtWidgets.QLabel('NEW UPDATE!' if match in updates else '')
                 label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
