@@ -1,17 +1,17 @@
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 from pinsey import Constants
-from pinsey.Utils import clickable, center, picture_grid, horizontal_line, resolve_message_sender, \
-    name_set, UserInformationWidgetStack
-from pinsey.gui.ImageWindow import ImageWindow
+from pinsey.Utils import clickable, center, picture_grid, horizontal_line, resolve_message_sender, name_set, windows
 from pinsey.gui.MessageWindow import MessageWindow
-from pinsey.gui.component.UserFilterStack import UserFilterStack
+from pinsey.gui.component.BrowseListing import BrowseListing
+from pinsey.gui.component.DislikesListing import DislikesListing
+from pinsey.gui.component.LikesListing import LikesListing
 from pinsey.handler.DecisionHandler import DecisionHandler
 from pinsey.handler.LikesHandler import LikesHandler
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 from pinsey.thread.LikesBotThread import LikesBotThread
-from pinsey.thread.NearbyUsersThread import NearbyUsersThread
 from pinsey.thread.SessionThread import SessionThread
 from pinsey.thread.MatchesThread import MatchesThread
 
@@ -53,7 +53,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Initialize application variables.
         self.app = app
-        self.windows = []
         self.session = None
         self.friend_list = []
         self.download_thread = []
@@ -61,6 +60,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.session_thread = None
         self.likes_bot = None
         self.likes_handler = LikesHandler()
+        self.filter_list = ['Date Added', 'Name', 'Age', 'Distance KM']
+        self.likeslisting = LikesListing('Reload', self.likes_handler, self.filter_list)
+        self.dislikeslisting = DislikesListing('Reload', self.likes_handler, self.filter_list)
+        self.browselisting = BrowseListing('Refresh', self.likes_handler, self.filter_list[1:])
         self.setWindowTitle(Constants.APP_NAME)
         self.setWindowIcon(QtGui.QIcon(Constants.ICON_FILEPATH))
         self.setMinimumWidth(500)
@@ -87,11 +90,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # Add tabs
         tabs.addTab(self.setup_settings(), 'Settings')
         tabs.addTab(self.setup_profile(), 'Profile')
-        filter_list = ['Date Added', 'Name', 'Age', 'Distance KM']
-        tabs.addTab(self.setup_userlisting('Reload', self.reload_likes, UserFilterStack(filter_list)), 'Liked')
-        tabs.addTab(self.setup_userlisting('Reload', self.reload_dislikes, UserFilterStack(filter_list)), 'Disliked')
-        tabs.addTab(self.setup_userlisting('Refresh', self.refresh_users,
-                                           UserFilterStack(filter_list[1:], False)), 'Browse')
+
+        tabs.addTab(self.likeslisting, 'Liked')
+        tabs.addTab(self.dislikeslisting, 'Disliked')
+        tabs.addTab(self.browselisting, 'Browse')
         tabs.addTab(self.setup_matches(), 'Matches')
 
         # Set main window layout
@@ -172,20 +174,6 @@ class MainWindow(QtWidgets.QMainWindow):
         tab_profile.setLayout(QtWidgets.QVBoxLayout())
         tab_profile.layout().addWidget(self.profile_area)
         return tab_profile
-
-    def setup_userlisting(self, refresh_text, refresh_function, filter_stack=None):
-        tab_userlist = QtWidgets.QWidget()
-        scroll = QtWidgets.QScrollArea()
-        btn_refresh = QtWidgets.QPushButton(refresh_text, self)
-        btn_refresh.clicked.connect(lambda: (refresh_function(scroll, btn_refresh, filter_stack)))
-
-        tab_userlist.setLayout(QtWidgets.QVBoxLayout())
-        if filter_stack:
-            tab_userlist.layout().addWidget(filter_stack)
-        tab_userlist.layout().addWidget(btn_refresh)
-        tab_userlist.layout().addWidget(scroll)
-        refresh_function(scroll, btn_refresh, filter_stack)
-        return tab_userlist
 
     def setup_matches(self):
         tab_matches = QtWidgets.QWidget()
@@ -493,12 +481,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 card_layout.addWidget(label_notification, 4, 1)
                 card_widget.setLayout(card_layout)
                 clickable(card_widget).connect(lambda m=match: (
-                    self.windows.append(MessageWindow(m, self, self.friend_list))
+                    windows.append(MessageWindow(m, self.friend_list))
                 ))
                 matches_list.layout().addWidget(card_widget)
 
                 # Check if any MessageWindow for this match. If there is, update the messages area.
-                for window in self.windows:
+                for window in windows:
                     if isinstance(window, MessageWindow) and match == window.match:
                         window.load_messages(match.messages)
 
@@ -514,151 +502,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.matches_thread.data_downloaded.connect(populate_matches)
         self.matches_thread.start()
 
-    def refresh_users(self, list_area, refresh_button, filter_stack=None):
-        def nearby_users_fetched(data):
-            refresh_button.setText('Refresh')
-            refresh_button.setDisabled(False)
-            if data:
-                if filter_stack:
-                    data.sort(
-                        key=lambda x: getattr(x, filter_stack.sort_attribute()), reverse=filter_stack.is_descending()
-                    )
-                    data = [x for x in data if x.gender.lower() in filter_stack.gender_filter()]
-                list_area.setWidget(self.populate_users(data, False))
-            else:
-                # No more users to go through. Reset the distance filter so the session will fetch the users again.
-                self.session.profile.distance_filter = self.session.profile.distance_filter
-                no_more_widget = QtWidgets.QWidget()
-                no_more_widget.setLayout(QtWidgets.QHBoxLayout())
-                no_more_widget.layout().addWidget(QtWidgets.QLabel('No more users to show for now.'))
-                list_area.setWidget(no_more_widget)
-
-        if self.session:
-            nearby_users = NearbyUsersThread(self.session)
-            nearby_users.data_downloaded.connect(nearby_users_fetched)
-            nearby_users.start()
-
-            # Show loading screen in the meantime.
-            refresh_button.setText('Refreshing...')
-            refresh_button.setDisabled(True)
-            loading = QtWidgets.QWidget()
-            loading.setLayout(QtWidgets.QHBoxLayout())
-            loading_icon = QtGui.QMovie('../resources/icons/heart-32x32.gif')
-            loading_label = QtWidgets.QLabel()
-            loading_label.setMovie(loading_icon)
-            loading_icon.start()
-            loading.layout().addWidget(QtWidgets.QLabel('Loading...'))
-            loading.layout().addWidget(loading_label)
-            list_area.setWidget(loading)
-        else:
-            label_noauth = QtWidgets.QLabel('Not connected. Please enter correct authentication details in Settings tab.')
-            noauth = QtWidgets.QWidget()
-            noauth.setLayout(QtWidgets.QVBoxLayout())
-            noauth.layout().addWidget(label_noauth)
-            list_area.setWidget(noauth)
-
-    def populate_users(self, user_list, is_history):
-        user_list_widget = QtWidgets.QWidget()
-        user_list_widget.setLayout(QtWidgets.QVBoxLayout())
-
-        # Populate the list with users if available.
-        for user in user_list:
-            # Thumbnail
-            try:
-                thumbnail = QtGui.QImage()
-                thumbnail.loadFromData(user.thumb_data)
-                label_thumbnail = QtWidgets.QLabel()
-                label_thumbnail.setFixedWidth(Constants.THUMBNAIL_SIZE)
-                label_thumbnail.setFixedHeight(Constants.THUMBNAIL_SIZE)
-                label_thumbnail.setScaledContents(True)
-                label_thumbnail.setPixmap(QtGui.QPixmap(thumbnail))
-                # IMPORTANT: lambda user=user forces a capture of the variable into the anonymous scope. Don't remove.
-                # Otherwise, the 'user' variable will just be a reference, and won't reflect the user assigned in loop.
-                clickable(label_thumbnail).connect(lambda user=user:
-                                                   (self.windows.append(ImageWindow(user.name, user.photos, self))))
-            except Exception as ex:
-                print('User population error: ' + str(ex))  # Doesn't matter, ignore if this user fails to populate.
-                continue
-
-            card = QtWidgets.QWidget()
-            card_layout = QtWidgets.QGridLayout()
-            card_layout.setSpacing(10)
-            info_widgets = UserInformationWidgetStack(user, self.friend_list)
-            card_layout.addWidget(label_thumbnail, 1, 0, 8, 1)
-            card_layout.addWidget(info_widgets.name_set, 1, 1)
-            card_layout.addWidget(info_widgets.dob, 2, 1)
-            card_layout.addWidget(info_widgets.distance, 3, 1)
-            card_layout.addWidget(info_widgets.connections, 4, 1)
-            card_layout.addWidget(info_widgets.schools, 5, 1)
-            card_layout.addWidget(info_widgets.jobs, 6, 1)
-            card_layout.addWidget(info_widgets.bio, 7, 1)
-
-            like_buttons_layout = QtWidgets.QHBoxLayout()
-            if not is_history:
-                # Like, dislike and super like buttons.
-                btn_like = QtWidgets.QPushButton('Like', self)
-                btn_dislike = QtWidgets.QPushButton('Dislike', self)
-                btn_superlike = QtWidgets.QPushButton('Super Like', self)
-                # 'ignore' is just a name to store and ignore the boolean that comes from the assigning the user
-                # parameter into the lambda scope. Do not remove, required to work.
-                btn_like.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
-                    self.likes_handler.like_user(u),
-                    l.setEnabled(False),
-                    d.setEnabled(False),
-                    s.setEnabled(False)
-                ))
-                btn_dislike.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
-                    self.likes_handler.dislike_user(u),
-                    l.setEnabled(False),
-                    d.setEnabled(False),
-                    s.setEnabled(False)
-                ))
-                btn_superlike.clicked.connect(lambda ignore, u=user, l=btn_like, d=btn_dislike, s=btn_superlike: (
-                    self.likes_handler.superlike_user(u),
-                    l.setEnabled(False),
-                    d.setEnabled(False),
-                    s.setEnabled(False)
-                ))
-
-                like_buttons_layout.addWidget(btn_like)
-                like_buttons_layout.addWidget(btn_dislike)
-                like_buttons_layout.addWidget(btn_superlike)
-            else:
-                if user.added_by.lower() == 'bot':
-                    added_by_style = "<span style='" + Constants.CSS_FONT_MESSAGE_MATCH + "font-size: large'>%s</span>"
-                else:
-                    added_by_style = "<span style='" + Constants.CSS_FONT_MESSAGE_YOU + "font-size: large'>%s</span>"
-
-                label_date_added = QtWidgets.QLabel(
-                    '<b>Date Added: </b>' +
-                    user.date_added.strftime("%B %d, %Y at %I:%M%p") + ' by ' +
-                    added_by_style % user.added_by
-                )
-                label_date_added.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-                btn_delete = QtWidgets.QPushButton('Delete', self)
-                btn_delete.clicked.connect(lambda ignore, u=user, b=btn_delete: (
-                    self.likes_handler.delete_history(u),
-                    b.setText('Deleted'),
-                    b.setEnabled(False)
-                ))
-                like_buttons_layout.addWidget(label_date_added)
-                like_buttons_layout.addWidget(btn_delete)
-
-            card_layout.addLayout(like_buttons_layout, 8, 1)
-            card.setLayout(card_layout)
-            user_list_widget.layout().addWidget(card)
-
-        return user_list_widget
-
-
-
     '''
         +================================================================+
         | HANDLING METHODS: Events, background, saving preferences, etc. |
         +================================================================+
     '''
     def closeEvent(self, event):
-        for window in self.windows:
+        for window in windows:
             window.close()  # Close all windows associated with this window.
         super(MainWindow, self).closeEvent(event)
         self.app.exit()
@@ -667,7 +517,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.type() == QtCore.QEvent.WindowStateChange:
             # TODO: Check if windowState = 3, happens when minimize on fullscreen window.
             if self.windowState() == QtCore.Qt.WindowMinimized:
-                for window in self.windows:
+                for window in windows:
                     window.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
                     window.hide()  # Hides all windows associated with this window.
                 self.setWindowFlags(self.windowFlags() | QtCore.Qt.Tool)  # Required to properly hide window.
@@ -679,7 +529,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def restore_window(self):
         if self.isHidden():
-            for window in self.windows:
+            for window in windows:
                 window.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
                 window.showNormal()
             self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.Tool)  # Required to properly show window.
@@ -695,6 +545,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.label_status.setText(status_text + '<span style="color:green;font-weight:bold">Online</span>')
                 self.load_profile()  # Automatically load profile after session is ready.
                 self.load_matches()  # Automatically load matches after session is ready.
+
+                # Update user listing.
+                self.likeslisting.friend_list = self.friend_list
+                self.likeslisting.refresh()
+                self.dislikeslisting.friend_list = self.friend_list
+                self.dislikeslisting.refresh()
+                self.browselisting.friend_list = self.friend_list
+                self.browselisting.session = self.session
             else:
                 self.session = None
                 self.label_status.setText(status_text + '<span style="color:red;font-weight:bold">Offline</span>')
@@ -756,22 +614,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.chk_respond_list.setChecked(config.getboolean('Chat', 'respond_list'))
             self.chk_respond_bot.setChecked(config.getboolean('Chat', 'respond_bot'))
             self.txt_pickup_threshold.setText(config.get('Chat', 'pickup_threshold'))
-
-    def reload_likes(self, list_area, _, filter_stack):
-        like_list = self.likes_handler.get_likes()
-        if filter_stack:
-            like_list.sort(key=lambda x: getattr(x, filter_stack.sort_attribute()),
-                           reverse=filter_stack.is_descending())
-            like_list = [x for x in like_list if x.gender.lower() in filter_stack.gender_filter()]
-        list_area.setWidget(self.populate_users(like_list, True))
-
-    def reload_dislikes(self, list_area, _, filter_stack):
-        dislike_list = self.likes_handler.get_dislikes()
-        if filter_stack:
-            dislike_list.sort(key=lambda x: getattr(x, filter_stack.sort_attribute()),
-                              reverse=filter_stack.is_descending())
-            dislike_list = [x for x in dislike_list if x.gender.lower() in filter_stack.gender_filter()]
-        list_area.setWidget(self.populate_users(dislike_list, True))
 
     def save_settings(self):
         config = ConfigParser()

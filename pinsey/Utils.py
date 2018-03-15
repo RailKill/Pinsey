@@ -1,7 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pinsey.Constants import FONT_EMOJI, FONT_HEADLINE, CSS_FONT_NOTIFICATION, CSS_FONT_MESSAGE_MATCH, \
-    CSS_FONT_MESSAGE_YOU
+    CSS_FONT_MESSAGE_YOU, THUMBNAIL_SIZE
 
+windows = []
 
 class EmptyDict(dict):
     pass
@@ -21,6 +22,9 @@ class UserInformationWidgetStack:
         """
         if not friend_list:
             friend_list = []
+
+        # Set the maximum width that an information stack should take up.
+        stack_maximum_width = THUMBNAIL_SIZE * 2
 
         self.name_set = name_set(user.name, user.gender, user.age)  # User will definitely have a name attribute.
         "QLabel formatting of user's name, gender and age."
@@ -43,6 +47,8 @@ class UserInformationWidgetStack:
         self.connections = QtWidgets.QLabel('<b>Common Connections: </b>' + connections)
         "QLabel containing user's list of common connections."
         self.connections.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.connections.setMaximumWidth(stack_maximum_width)
+        self.connections.setWordWrap(True)
 
         if user.schools:
             schools = ", ".join(str(x) for x in user.schools)
@@ -51,6 +57,8 @@ class UserInformationWidgetStack:
         self.schools = QtWidgets.QLabel('<b>Schools: </b>' + schools)
         "QLabel containing user's list of schools."
         self.schools.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.schools.setMaximumWidth(stack_maximum_width)
+        self.schools.setWordWrap(True)
 
         if user.jobs:
             jobs = ", ".join(str(x) for x in user.jobs)
@@ -59,6 +67,8 @@ class UserInformationWidgetStack:
         self.jobs = QtWidgets.QLabel('<b>Occupation: </b>' + jobs)
         "QLabel containing user's list of jobs."
         self.jobs.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.jobs.setMaximumWidth(stack_maximum_width)
+        self.jobs.setWordWrap(True)
 
         self.bio = QtWidgets.QLabel()
         "QLabel containing user's biography."
@@ -69,6 +79,8 @@ class UserInformationWidgetStack:
             self.bio.setText('No biography found.')
         self.bio.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         self.bio.setFont(FONT_EMOJI)
+        self.bio.setMaximumWidth(stack_maximum_width)
+        self.bio.setWordWrap(True)
 
 
 def clickable(widget):

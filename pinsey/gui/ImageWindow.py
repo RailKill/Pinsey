@@ -3,14 +3,13 @@ import webbrowser
 
 from PyQt5 import QtGui, QtWidgets
 from pinsey.Constants import ICON_FILEPATH
-from pinsey.Utils import clickable, center
+from pinsey.Utils import clickable, center, windows
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
-class ImageWindow(QtWidgets.QMainWindow):
-    def __init__(self, name, image_urls, main_window):
+class ImageWindow(QtWidgets.QMdiSubWindow):
+    def __init__(self, name, image_urls):
         super(ImageWindow, self).__init__()
-        self.main_window = main_window
         self.url_list = list(image_urls)
         self.photo_list = []
         self.current_image_count = -1  # Initialize at negative 1, so the index will start at 0 during update_image().
@@ -27,7 +26,7 @@ class ImageWindow(QtWidgets.QMainWindow):
         download_photos = DownloadPhotosThread(self.url_list)
         download_photos.data_downloaded.connect(self.ready)
         download_photos.start()
-        self.setCentralWidget(QtWidgets.QLabel('Fetching images of ' + name + '...'))
+        self.setWidget(QtWidgets.QLabel('Fetching images of ' + name + '...'))
         self.setWindowTitle('Pinsey: Pictures of ' + name)
         self.setWindowIcon(QtGui.QIcon(ICON_FILEPATH))
         self.setFixedWidth(620)
@@ -36,7 +35,7 @@ class ImageWindow(QtWidgets.QMainWindow):
         self.show()
 
     def closeEvent(self, event):
-        self.main_window.windows.remove(self)
+        windows.remove(self)
         super(ImageWindow, self).closeEvent(event)
 
     def ready(self, data):
@@ -44,7 +43,7 @@ class ImageWindow(QtWidgets.QMainWindow):
         self.draw()
 
     def draw(self):
-        self.setCentralWidget(self.update_image())
+        self.setWidget(self.update_image())
 
     def update_image(self):
         # Update currently viewed image count.

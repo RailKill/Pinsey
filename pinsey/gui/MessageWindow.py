@@ -1,14 +1,13 @@
 from PyQt5 import QtGui, QtWidgets
 from pinsey.Constants import ICON_FILEPATH, THUMBNAIL_SIZE, NUMBER_OF_PHOTOS, \
     CSS_FONT_MESSAGE_YOU, FONT_EMOJI
-from pinsey.Utils import center, picture_grid, resolve_message_sender, UserInformationWidgetStack
+from pinsey.Utils import center, picture_grid, resolve_message_sender, windows, UserInformationWidgetStack
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
-class MessageWindow(QtWidgets.QMainWindow):
-    def __init__(self, match, main_window, friend_list):
+class MessageWindow(QtWidgets.QMdiSubWindow):
+    def __init__(self, match, friend_list):
         super(MessageWindow, self).__init__()
-        self.main_window = main_window
         self.match = match
         self.photo_data = {}
         self.friend_list = friend_list
@@ -22,12 +21,12 @@ class MessageWindow(QtWidgets.QMainWindow):
         self.setWindowIcon(QtGui.QIcon(ICON_FILEPATH))
         self.messages_area = QtWidgets.QTextEdit()
         self.send_area = QtWidgets.QPlainTextEdit()
-        self.setCentralWidget(QtWidgets.QLabel('Loading details for ' + match.user.name + '...'))
+        self.setWidget(QtWidgets.QLabel('Loading details for ' + match.user.name + '...'))
         center(self)
         self.show()
 
     def closeEvent(self, event):
-        self.main_window.windows.remove(self)
+        windows.remove(self)
         super(MessageWindow, self).closeEvent(event)
 
     def ready(self, data):
@@ -35,7 +34,7 @@ class MessageWindow(QtWidgets.QMainWindow):
         self.draw()
 
     def draw(self):
-        self.setCentralWidget(self.load_details())
+        self.setWidget(self.load_details())
 
     def load_details(self):
         # Setup the messaging layout.

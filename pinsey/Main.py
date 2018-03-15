@@ -1,10 +1,11 @@
 import logging
 import os
 import sys
+
 from PyQt5 import QtWidgets
+
 from pinsey.Constants import LOGS_DATA_DIR
 from pinsey.gui.MainWindow import MainWindow
-
 
 # Set up logging service for bot.
 log_path = LOGS_DATA_DIR + 'pinsey.log'
