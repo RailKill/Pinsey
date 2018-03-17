@@ -3,7 +3,8 @@ from pinsey.gui.component.PaginationWidget import PaginationWidget
 from pinsey.gui.component.UserFilterStack import UserFilterStack
 from pinsey import Constants
 from pinsey.gui.ImageWindow import ImageWindow
-from pinsey.Utils import clickable, windows, UserInformationWidgetStack
+from pinsey.Utils import clickable, windows
+from gui.component.UserInformationStack import UserInformationStack
 from PyQt5 import QtGui, QtWidgets
 
 
@@ -46,7 +47,7 @@ class UserListingWidget(QtWidgets.QWidget):
         card = QtWidgets.QWidget()
         card_layout = QtWidgets.QGridLayout()
         card_layout.setSpacing(10)
-        info_widgets = UserInformationWidgetStack(user, self.friend_list)
+        info_widgets = UserInformationStack(user, self.friend_list)
         card_layout.addWidget(label_thumbnail, 1, 0, 8, 1)
         card_layout.addWidget(info_widgets.name_set, 1, 1)
         card_layout.addWidget(info_widgets.dob, 2, 1)

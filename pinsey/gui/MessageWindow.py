@@ -1,7 +1,8 @@
 from PyQt5 import QtGui, QtWidgets
 from pinsey.Constants import ICON_FILEPATH, THUMBNAIL_SIZE, NUMBER_OF_PHOTOS, \
     CSS_FONT_MESSAGE_YOU, FONT_EMOJI
-from pinsey.Utils import center, picture_grid, resolve_message_sender, windows, UserInformationWidgetStack
+from pinsey.Utils import center, picture_grid, resolve_message_sender, windows
+from gui.component.UserInformationStack import UserInformationStack
 from pinsey.thread.DownloadPhotosThread import DownloadPhotosThread
 
 
@@ -41,7 +42,7 @@ class MessageWindow(QtWidgets.QMdiSubWindow):
         info_widget = QtWidgets.QWidget()
         number_of_photos = NUMBER_OF_PHOTOS
         info_layout = picture_grid(self.photo_data, THUMBNAIL_SIZE, number_of_photos)
-        info_stack = UserInformationWidgetStack(self.match.user, self.friend_list)
+        info_stack = UserInformationStack(self.match.user, self.friend_list)
         info_layout.addWidget(info_stack.name_set, number_of_photos, 0, 1, number_of_photos)
         info_layout.addWidget(info_stack.dob, number_of_photos + 1, 0, 1, number_of_photos)
         info_layout.addWidget(info_stack.distance, number_of_photos + 2, 0, 1, number_of_photos)
