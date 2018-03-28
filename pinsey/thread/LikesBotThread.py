@@ -1,4 +1,5 @@
 import logging
+from pynder import errors
 from random import randint
 from PyQt5 import QtCore
 
@@ -45,10 +46,19 @@ class LikesBotThread(QtCore.QThread):
                     self.likes_handler.like_user(user, 'Bot')
                     self.logger.info(u'Liking ' + user.name + '.')
                 except StopIteration:
-                    # No more users to go through. Reset the distance filter to fetch the users again.
-                    self.session.profile.distance_filter = self.session.profile.distance_filter
-                    break
+                    try:
+                        # No more users to go through. Reset the distance filter to fetch the users again.
+                        self.session.profile.distance_filter = self.session.profile.distance_filter
+                    except errors.RequestError:
+                        self.logger.error('Request timed out when trying to update distance filter in profile.')
+                except errors.RecsError:
+                    self.logger.info('There are probably no more nearby users to fetch. '
+                                     'Increasing distance filter by 1 mile...')
+                    self.session.profile.distance_filter += 1
                 self.sleep(randint(3, 5))  # Give it a break, 3 to 5 seconds between every swipe.
             else:
-                self.logger.info('Out of likes. Can like in: ' + str(self.session.can_like_in) + ' seconds.')
-                self.sleep(3600)  # Out of likes, pausing for 1 hour.
+                try:
+                    self.logger.info('Out of likes. Can like in: ' + str(self.session.can_like_in) + ' seconds.')
+                except errors.RequestError:
+                    self.logger.info('Out of likes. Retrying in an hour...')
+                self.sleep(3600 * 6)  # Out of likes, pausing for X hours.

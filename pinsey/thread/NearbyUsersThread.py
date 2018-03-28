@@ -1,4 +1,5 @@
 import urllib
+from pynder import errors
 from PyQt5 import QtCore
 
 
@@ -37,6 +38,10 @@ class NearbyUsersThread(QtCore.QThread):
                 # Ignore. Sometimes images are inaccessible, maybe it's private or deleted?
                 print('Nearby users fetching error: ' + str(ex))
             except StopIteration:
+                break
+            except errors.RecsTimeout as recs:
+                # Request timeout, stop and ask the user to try again later.
+                print('Request timeout. Possibly no more nearby users to show. ' + str(recs))
                 break
 
         # Return the modified list of users.
