@@ -22,6 +22,8 @@ class LikesListing(UserListingWidget):
         filtered_list.sort(key=lambda x: getattr(x, self.filter_stack.sort_attribute()),
                            reverse=self.filter_stack.is_descending())
         filtered_list = [x for x in filtered_list if x.gender.lower() in self.filter_stack.gender_filter()]
+        filtered_list = [x for x in filtered_list if self.filter_stack.txt_keyword.text().lower() in x.name.lower() or
+                         self.filter_stack.txt_keyword.text().lower() in x.bio.lower()]
 
         # Select X amount of users from list to display based on current page
         # TODO: Don't hardcode 20 as the amount of users to display.

@@ -8,6 +8,7 @@ class BrowseListing(UserListingWidget):
     def __init__(self, *args, **kwargs):
         super(BrowseListing, self).__init__(*args, **kwargs)
         self.session = None
+        self.filter_stack.setVisible(False)  # No need to filter, Tinder settings already does most of it.
         self.pagination_widget.setVisible(False)  # No pagination for browsing, just keep refreshing instead.
 
     def create_user_card(self, user):

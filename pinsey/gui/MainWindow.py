@@ -426,12 +426,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def populate_matches(data):
             matches = data
-            updates = list(self.session.updates())
-            updates_balloon_message = ''
+            #updates = list(self.session.updates())
+            #updates_balloon_message = ''
 
             matches_list = QtWidgets.QWidget()
             matches_list.setLayout(QtWidgets.QVBoxLayout())
             for match in matches:
+                """
                 # Show notification if it is in updates.
                 for update in updates:
                     if match.user.id == update.user.id:
@@ -439,6 +440,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         if not update.messages:
                             updates_balloon_message += ' (NEW) '
                         updates_balloon_message += '\n'
+                """
 
                 # Load thumbnail of match.
                 label_thumbnail = QtWidgets.QLabel()
@@ -467,8 +469,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 label_last_message = QtWidgets.QLabel(display_message)
                 # Create notification text.
-                label_notification = QtWidgets.QLabel('NEW UPDATE!' if match in updates else '')
-                label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
+                #label_notification = QtWidgets.QLabel('NEW UPDATE!' if match in updates else '')
+                #label_notification.setStyleSheet(Constants.CSS_FONT_NOTIFICATION)
 
                 # Create a card for each match.
                 card_widget = QtWidgets.QWidget()
@@ -478,7 +480,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 card_layout.addWidget(label_name, 1, 1)
                 card_layout.addWidget(label_match_date, 2, 1)
                 card_layout.addWidget(label_last_message, 3, 1)
-                card_layout.addWidget(label_notification, 4, 1)
+                #card_layout.addWidget(label_notification, 4, 1)
                 card_widget.setLayout(card_layout)
                 clickable(card_widget).connect(lambda m=match: (
                     windows.append(MessageWindow(m, self.friend_list))
@@ -492,8 +494,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.matches_area.setWidget(matches_list)
             self.matches_area.setAlignment(QtCore.Qt.AlignCenter)
+
+            """
             if updates_balloon_message:
                 self.tray_icon.showMessage('Pinsey: New Update!', updates_balloon_message)
+            """
 
             if self.chk_refresh.isChecked():
                 self.load_matches(int(self.txt_refresh_interval.text()))

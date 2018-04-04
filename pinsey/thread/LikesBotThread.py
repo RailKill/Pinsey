@@ -58,7 +58,10 @@ class LikesBotThread(QtCore.QThread):
                 self.sleep(randint(3, 5))  # Give it a break, 3 to 5 seconds between every swipe.
             else:
                 try:
-                    self.logger.info('Out of likes. Can like in: ' + str(self.session.can_like_in) + ' seconds.')
+                    like_in_seconds = self.session.can_like_in
+                    like_in_hours = like_in_seconds / 60 / 60
+                    self.logger.info('Out of likes. Can like in: ' + str(like_in_seconds) + ' seconds (' +
+                                     str(like_in_hours) + ' hours).')
                 except errors.RequestError:
                     self.logger.info('Out of likes. Retrying in an hour...')
                 self.sleep(3600 * 6)  # Out of likes, pausing for X hours.

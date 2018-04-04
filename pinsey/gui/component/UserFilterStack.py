@@ -27,6 +27,7 @@ class UserFilterStack(QtWidgets.QWidget):
             self.radio_ascending.setChecked(True)
 
         label_filter = QtWidgets.QLabel('Filter: ')
+        self.txt_keyword = QtWidgets.QLineEdit()
         self.chk_male = QtWidgets.QCheckBox('Male')
         self.chk_male.setChecked(True)
         self.chk_female = QtWidgets.QCheckBox('Female')
@@ -39,6 +40,7 @@ class UserFilterStack(QtWidgets.QWidget):
         layout.addWidget(self.radio_descending)
         layout.addStretch()
         layout.addWidget(label_filter)
+        layout.addWidget(self.txt_keyword)
         layout.addWidget(self.chk_male)
         layout.addWidget(self.chk_female)
         self.setLayout(layout)
