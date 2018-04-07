@@ -34,5 +34,6 @@ def my_exception_hook(exctype, value, traceback):
 sys.excepthook = my_exception_hook
 
 app = QtWidgets.QApplication(sys.argv)
+app.setQuitOnLastWindowClosed(False)
 gui = MainWindow(app)
 sys.exit(app.exec_())
