@@ -12,7 +12,7 @@ Ghost.py==0.2.3
 idna==2.6
 matplotlib==2.1.2
 munch==2.2.0
-numpy==1.14.1
+numpy==1.22.0
 olefile==0.45.1
 opencv-python==4.2.0.32
 pandas==0.22.0
